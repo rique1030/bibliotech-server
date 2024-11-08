@@ -18,7 +18,7 @@ class MainServer:
 		self.requester = DBRequestsHandler()
 
 		#start backup thread
-		threading.Thread(target=self.backup_thread).start()
+		threading.Thread(target=self.backup_thread, daemon=True).start()
 
 		#routes
 		app.add_url_rule('/insert_books', view_func=self.add_books, methods=['POST'])
@@ -37,7 +37,9 @@ class MainServer:
 		return self.requester.insert_books(books)
 
 	def get_books(self):
-		return jsonify(self.requester.select_books()), 200
+		page_number = request.args.get('page', default=0, type=int)
+		print("page number: ", page_number)
+		return jsonify(self.requester.select_books(page_number)), 200
 
 if __name__ == "__main__":
 	server = MainServer()

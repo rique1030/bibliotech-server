@@ -115,10 +115,12 @@ class DBRequestsHandler:
 		except mariadb.Error as err:
 			return (f"Error while inserting data: {err}")
 
-	def select_books(self):
+	def select_books(self, page_index = 0):
 		try:
 			with DBConnectionManager() as cursor:
-				cursor.execute("SELECT * FROM books")
+				starting_index = page_index * 15
+				limit = 15
+				cursor.execute("SELECT * FROM books LIMIT %s OFFSET %s", (limit, starting_index))
 				rows = cursor.fetchall()
 
 				# Initialize books with a key and an empty list
@@ -128,6 +130,7 @@ class DBRequestsHandler:
 				# Convert each row to a dictionary
 				for row in rows:
 					book = {
+						"unique_key": row[0],
 						"access_number": row[1],  # Assuming first column is access number
 						"call_number": row[2],    # Assuming second column is call number
 						"title": row[3],          # Assuming third column is title
