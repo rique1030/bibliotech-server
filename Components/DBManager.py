@@ -1,12 +1,14 @@
 import mariadb
 import os
 import datetime
+print("mariadb version: ",mariadb.__version__)
 
 class DBCreationConnectionManager:
 	def __init__(self):
 		self.host = "localhost"
 		self.user = "root"  # Adjust username if needed
 		self.password = os.getenv('db_password')
+
 		# Assert that the password is not None (i.e., it is set)
 		assert self.password is not None, "Environment variable 'db_password' is not set!"
 
@@ -98,6 +100,17 @@ class DBRequestsHandler:
 
 		pass
 
+	def get_book_count(self):
+		try:
+			with DBConnectionManager() as cursor:
+				cursor.execute("SELECT COUNT(*) FROM books")
+				count = cursor.fetchone()[0]
+				return count
+		except mariadb.Error as err:
+			print(f"Error: {err}")
+			return None
+
+
 	def insert_books(self, books):
 		try:
 			with DBConnectionManager() as cursor:
@@ -115,12 +128,32 @@ class DBRequestsHandler:
 		except mariadb.Error as err:
 			return (f"Error while inserting data: {err}")
 
-	def select_books(self, page_index = 0):
+	def select_books(self, page_index = 0, filter_term = None, search_term= None):
 		try:
 			with DBConnectionManager() as cursor:
 				starting_index = page_index * 15
 				limit = 15
-				cursor.execute("SELECT * FROM books LIMIT %s OFFSET %s", (limit, starting_index))
+
+				#base query
+				search_filter = ""
+				params = [limit, starting_index]
+				if search_term and filter_term:
+					f_term = "access_number"
+					match filter_term:
+						case "acc_num":
+							f_term = "access_number"
+						case "call_num":
+							f_term = "call_number"
+						case _:
+							f_term = filter_term
+
+					# search_filter = (" WHERE %s LIKE %s", (f_term, search_term))
+					search_filter = f"WHERE {f_term} LIKE %s"
+					params.insert(0, f"%{search_term}%")
+
+				query = f"SELECT * FROM books {search_filter} LIMIT %s OFFSET %s"
+				cursor.execute(query, tuple(params))
+				# cursor.execute("SELECT * FROM books %s LIMIT  %s OFFSET %s", ( search_filter, limit, starting_index))
 				rows = cursor.fetchall()
 
 				# Initialize books with a key and an empty list

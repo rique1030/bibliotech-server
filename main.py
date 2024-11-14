@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import threading
 import time
+import math
 from Components.DBManager import DBManager, DBRequestsHandler
 
 app = Flask(__name__)
@@ -23,6 +24,7 @@ class MainServer:
 		#routes
 		app.add_url_rule('/insert_books', view_func=self.add_books, methods=['POST'])
 		app.add_url_rule('/select_books', view_func=self.get_books, methods=['GET'])
+		app.add_url_rule('/get_book_count', view_func=self.get_page_count, methods=['GET'])
 
 	def backup_thread(self):
 		while True:
@@ -38,8 +40,22 @@ class MainServer:
 
 	def get_books(self):
 		page_number = request.args.get('page', default=0, type=int)
-		print("page number: ", page_number)
+		filter_term = request.args.get('filter', default='', type=str)
+		search_term = request.args.get('search', default='', type=str)
+		# print(page_number, filter_term, search_term)
+		if search_term:
+			result = jsonify(self.requester.select_books(page_number, filter_term, search_term)), 200
+			# print(self.requester.select_books(page_number, filter_term, search_term))
+			return result
 		return jsonify(self.requester.select_books(page_number)), 200
+
+
+	def get_page_count(self):
+		count = self.requester.get_book_count()
+		page_count = math.ceil(count / 15)
+		print("count: ", count)
+		print("page count: ", page_count)
+		return jsonify(page_count), 200
 
 if __name__ == "__main__":
 	server = MainServer()
