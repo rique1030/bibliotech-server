@@ -4,11 +4,10 @@ import datetime
 print("mariadb version: ",mariadb.__version__)
 
 class DBCreationConnectionManager:
-	def __init__(self):
+	def __init__(self):		
 		self.host = "localhost"
 		self.user = "root"  # Adjust username if needed
 		self.password = os.getenv('db_password')
-
 		# Assert that the password is not None (i.e., it is set)
 		assert self.password is not None, "Environment variable 'db_password' is not set!"
 
@@ -49,10 +48,6 @@ class DBConnectionManager:
 	def __exit__(self, exc_type, exc_value, traceback):
 		self.conn.commit()  # Commit any changes if needed
 		self.conn.close()
-
-
-
-
 
 class DBManager:
 	def __init__(self):
@@ -129,6 +124,7 @@ class DBRequestsHandler:
 			return (f"Error while inserting data: {err}")
 
 	def select_books(self, page_index = 0, filter_term = None, search_term= None):
+		print("Selecting books...")
 		try:
 			with DBConnectionManager() as cursor:
 				starting_index = page_index * 15
