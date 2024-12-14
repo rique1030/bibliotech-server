@@ -7,13 +7,29 @@ class AccountManager:
     def __init__(self):
         self.acc = AccountDataParser()
         self.crud = CrudHandler()
+        self.page_size = 15
+
+    def fetch_accounts(self):
+            data = request.get_json()
+            starting_index = data["page"] * self.page_size
+            search_filter, search_params = AccountDataParser.build_search_filter(self, data["filter"], data["search"])
+            query = ACCOUNT_HANDLER_QUERIES.SELECT_ACCOUNTS.format(search_filter=search_filter)
+            params = search_params + [self.page_size, starting_index]
+            count = self.crud.execute_query(ACCOUNT_HANDLER_QUERIES.COUNT_ACCOUNTS.format(search_filter=search_filter), search_params, fetch=True)
+            page_count = 0
+            if count["success"]:
+                page_count = count["data"][0][0] // self.page_size
+
+            accounts = self.crud.execute_query(query, params, fetch=True)
+            return {"accounts": accounts["data"], "page_count": page_count}
+
 
     def signup(self):
-        data = request.get_json()
-        account = self.acc.parse_account_signup_data(data["account"])
-        is_valid = self.validate_email_and_username(account)
-        if not is_valid['success']: return {"success": False, "error": is_valid['error']}
-        return self.crud.execute_query(ACCOUNT_HANDLER_QUERIES.INSERT_ACCOUNT, account)
+        account = request.get_json()
+        account = self.acc.parse_account_signup_data(account["account"])
+        accounts = self.crud.execyte_multiple_query(ACCOUNT_HANDLER_QUERIES.INSERT_ACCOUNT, account)
+        print(accounts)
+        return accounts
     
     def validate_email_and_username(self, account):
         username = (account[0],)
@@ -33,16 +49,21 @@ class AccountManager:
     
     def update_accounts(self):
         data = request.get_json()
-        accounts = self.acc.parse_account_update_datas(data["accounts"])
+        accounts = self.acc.parse_account_update_datas(data["account"])
+        print(accounts)
         return self.crud.execyte_multiple_query(ACCOUNT_HANDLER_QUERIES.UPDATE_ACCOUNTS, accounts)
     
     def delete_accounts(self):
         data = request.get_json()
-        account_ids = self.acc.parse_account_delete_data(data["account_ids"])
+        print(data)
+        account_ids = self.acc.parse_account_delete_data(data["account"])
         return self.crud.execyte_multiple_query(ACCOUNT_HANDLER_QUERIES.DELETE_ACCOUNT, account_ids)
 
     def get_accounts(self):
-        return self.crud.execute_query(ACCOUNT_HANDLER_QUERIES.SELECT_ACCOUNTS, fetch=True)
+        data = request.get_json()
+        account_ids = data["account"]
+        placeholders = ",".join(["%s"] * len(account_ids))
+        return self.crud.execute_query(ACCOUNT_HANDLER_QUERIES.SELECT_ACCOUNT_BY_ID.format(placeholders=placeholders), account_ids, fetch=True)
     
     def add_user_types(self):
         data = request.get_json()

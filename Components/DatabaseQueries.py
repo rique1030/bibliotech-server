@@ -1,8 +1,24 @@
 class ACCOUNT_HANDLER_QUERIES:
     INSERT_ACCOUNT = "INSERT INTO accounts (username, password, email, user_type_id) VALUES (%s, %s, %s, %s)"
     INSERT_ACCOUNT_TYPE = "INSERT INTO user_type (user_type) VALUES (%s)"
-    SELECT_ACCOUNTS = "SELECT * FROM accounts"
-    SELECT_ACCOUNT_BY_ID = "SELECT * FROM accounts WHERE id = %s"
+    SELECT_ACCOUNTS = """
+    SELECT 
+        accounts.id,
+        accounts.username,
+        accounts.password,
+        accounts.email,
+        user_type.user_type
+    FROM 
+        accounts
+    LEFT JOIN 
+        user_type 
+    ON 
+        accounts.user_type_id = user_type.user_type_id
+    {search_filter}
+    LIMIT %s OFFSET %s;
+    """
+    COUNT_ACCOUNTS = "SELECT COUNT(*) FROM accounts {search_filter}"
+    SELECT_ACCOUNT_BY_ID = "SELECT * FROM accounts WHERE id IN ({placeholders})"
     SELECT_ACCOUNTS_BY_USERNAME = "SELECT * FROM accounts WHERE username = %s"
     SELECT_ACCOUNTS_BY_EMAIL = "SELECT * FROM accounts WHERE email = %s"
     SELECT_ACCOUNTS_BY_USERNAME_AND_PASSWORD = "SELECT * FROM accounts WHERE username = %s AND password = %s"

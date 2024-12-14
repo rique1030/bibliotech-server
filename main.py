@@ -51,7 +51,8 @@ class MainServer:
 		app.add_url_rule('/login', view_func=self.account_handler.login, methods=['POST'])
 		app.add_url_rule('/update_accounts', view_func=self.account_handler.update_accounts, methods=['POST'])
 		app.add_url_rule('/delete_accounts', view_func=self.account_handler.delete_accounts, methods=['POST'])
-		app.add_url_rule('/get_accounts', view_func=self.account_handler.get_accounts, methods=['GET'])
+		app.add_url_rule('/get_accounts', view_func=self.account_handler.get_accounts, methods=['POST'])
+		app.add_url_rule('/fetch_accounts', view_func=self.account_handler.fetch_accounts, methods=['POST'])
 		# ? user type routes
 		app.add_url_rule('/add_user_types', view_func=self.account_handler.add_user_types, methods=['POST'])
 		app.add_url_rule('/get_user_types', view_func=self.account_handler.get_user_types, methods=['GET'])

@@ -11,7 +11,7 @@ print( Fore.GREEN + "mariadb version: ",mariadb.__version__ + Style.RESET_ALL)
 
 class DatabaseManager:
 	def __init__(self):
-		self.database = "bibiotech_db"
+		self.database = "bibliotech_db"
 		self.password = os.getenv('db_password')
 		self.default_user_types = [("Admin",), ("User",)]
 

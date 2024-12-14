@@ -17,6 +17,7 @@ class BookManager:
         search_filter, search_params = BookDataParser.build_search_filter(self, data["filter"], data["search"])
         query = BOOK_HANDLER_QUERIES.SELECT_BOOKS.format(search_filter=search_filter)
         params = search_params + [self.page_size, starting_index]
+        print(query,params)
         count = self.crud.execute_query(BOOK_HANDLER_QUERIES.COUNT_BOOKS.format(search_filter=search_filter), search_params, fetch=True)
         page_count = 0
         if count["success"]:
