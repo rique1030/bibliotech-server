@@ -55,8 +55,9 @@ class MainServer:
 		app.add_url_rule('/fetch_accounts', view_func=self.account_handler.fetch_accounts, methods=['POST'])
 		# ? user type routes
 		app.add_url_rule('/add_user_types', view_func=self.account_handler.add_user_types, methods=['POST'])
-		app.add_url_rule('/get_user_types', view_func=self.account_handler.get_user_types, methods=['GET'])
+		app.add_url_rule('/fetch_user_types', view_func=self.account_handler.fetch_user_types, methods=['POST'])
 		app.add_url_rule('/update_user_types', view_func=self.account_handler.update_user_types, methods=['POST'])
+		app.add_url_rule('/get_user_types', view_func=self.account_handler.get_user_types, methods=['GET'])
 		app.add_url_rule('/delete_user_types', view_func=self.account_handler.delete_user_types, methods=['POST'])
 		# ? records routes
 		app.add_url_rule('/get_records_book_copies', view_func=self.book_handler.get_records_book_copies, methods=['GET'])

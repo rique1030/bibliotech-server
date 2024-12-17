@@ -22,11 +22,14 @@ class ACCOUNT_HANDLER_QUERIES:
     SELECT_ACCOUNTS_BY_USERNAME = "SELECT * FROM accounts WHERE username = %s"
     SELECT_ACCOUNTS_BY_EMAIL = "SELECT * FROM accounts WHERE email = %s"
     SELECT_ACCOUNTS_BY_USERNAME_AND_PASSWORD = "SELECT * FROM accounts WHERE username = %s AND password = %s"
-    SELECT_ACCOUNT_TYPES = "SELECT * FROM user_type"
     UPDATE_ACCOUNTS = "UPDATE accounts SET username = %s, password = %s, email = %s, user_type_id = %s WHERE id = %s"
     UPDATE_ACCOUNT_PASSWORD = "UPDATE accounts SET password = %s WHERE username = %s"
-    UPDATE_USER_TYPES = "UPDATE user_type SET user_type = %s WHERE user_type_id = %s"
     DELETE_ACCOUNT = "DELETE FROM accounts WHERE id = %s"
+
+    FETCH_USER_TYPES = "SELECT * FROM user_type {search_filter} LIMIT %s OFFSET %s;"
+    INSERT_USER_TYPE = "INSERT INTO user_type (user_type) VALUES (%s)"
+    SELECT_ACCOUNT_TYPES = "SELECT * FROM user_type"
+    UPDATE_USER_TYPES = "UPDATE user_type SET user_type = %s WHERE user_type_id = %s"
     DELETE_ACCOUNT_TYPE = "DELETE FROM user_type WHERE user_type_id = %s"
 
 class BOOK_HANDLER_QUERIES:
@@ -72,9 +75,14 @@ class DATABASE_QUERIES:
     CREATE_USER_TYPE_TABLE = """
     CREATE TABLE IF NOT EXISTS user_type (
         user_type_id INT AUTO_INCREMENT PRIMARY KEY,
-        user_type VARCHAR(50) NOT NULL UNIQUE
+        user_type VARCHAR(50) NOT NULL UNIQUE,
+        account BOOLEAN DEFAULT 0,
+        books BOOLEAN DEFAULT 0,
+        categories BOOLEAN DEFAULT 0,
+        usertypes BOOLEAN DEFAULT 0
     );
     """
+
 
     CREATE_ACCOUNTS_TABLE = """
     CREATE TABLE IF NOT EXISTS accounts (

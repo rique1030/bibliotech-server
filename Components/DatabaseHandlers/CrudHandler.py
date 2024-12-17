@@ -1,5 +1,6 @@
 from ..ContextManager import RequestContextManager
 from mariadb import Error
+from json import dumps
 
 
 class CrudHandler:
