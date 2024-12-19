@@ -13,7 +13,7 @@ class DatabaseManager:
 	def __init__(self):
 		self.database = "bibliotech_db"
 		self.password = os.getenv('db_password')
-		self.default_user_types = [("Admin",), ("User",)]
+		self.default_user_types = [("Admin",1 , 1 , 1, 1), ("User", 0, 0 ,0 ,0)]
 
 	def backup_database(self):
 		backup_file = f"{self.database}_backup_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"

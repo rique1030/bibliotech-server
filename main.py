@@ -33,37 +33,41 @@ class MainServer:
 		#routes
 
 		### ? book routes
-		app.add_url_rule('/fetch_books', view_func=self.book_handler.get_books, methods=['POST'])
-		app.add_url_rule('/insert_books', view_func=self.book_handler.insert_books, methods=['POST'])
-		app.add_url_rule('/update_books', view_func=self.book_handler.update_books, methods=['POST'])
-		app.add_url_rule('/delete_books', view_func=self.book_handler.delete_books, methods=['POST'])
-		app.add_url_rule('/accept_request', view_func=self.book_handler.accept_request, methods=['POST'])
+		app.add_url_rule('/books/fetch', view_func=self.book_handler.get_books, methods=['POST'])
+		app.add_url_rule('/books/get', view_func=self.book_handler.get_book_by_id, methods=['POST'])
+		app.add_url_rule('/books/insert', view_func=self.book_handler.insert_books, methods=['POST'])
+		app.add_url_rule('/books/update', view_func=self.book_handler.update_books, methods=['POST'])
+		app.add_url_rule('/books/delete', view_func=self.book_handler.delete_books, methods=['POST'])
+		app.add_url_rule('/request/accept', view_func=self.book_handler.accept_request, methods=['POST'])
 		# ? category routes
-		app.add_url_rule('/add_categories', view_func=self.book_handler.add_cateories, methods=['POST'])
-		app.add_url_rule('/get_categories', view_func=self.book_handler.get_categories, methods=['GET'])
-		app.add_url_rule('/update_categories', view_func=self.book_handler.update_categories, methods=['POST'])
-		app.add_url_rule('/delete_categories', view_func=self.book_handler.delete_categories, methods=['POST'])
-		app.add_url_rule('/add_joint_categories', view_func=self.book_handler.add_joint_categories, methods=['POST'])
-		app.add_url_rule('/remove_joint_categories', view_func=self.book_handler.remove_joint_categories, methods=['POST'])
-		app.add_url_rule('/get_joint_categories', view_func=self.book_handler.get_joint_categories, methods=['POST'])
+		app.add_url_rule('/categories/insert', view_func=self.book_handler.insert_categories, methods=['POST'])
+		app.add_url_rule('/categories/get-get', view_func=self.book_handler.get_categories, methods=['GET'])
+		app.add_url_rule('/categories/get', view_func=self.book_handler.get_category_by_id, methods=['POST'])
+		app.add_url_rule('/categories/fetch', view_func=self.book_handler.fetch_categories, methods=['POST'])
+		app.add_url_rule('/categories/update', view_func=self.book_handler.update_categories, methods=['POST'])
+		app.add_url_rule('/categories/delete', view_func=self.book_handler.delete_categories, methods=['POST'])
+		app.add_url_rule('/categories/join', view_func=self.book_handler.add_joint_categories, methods=['POST'])
+		app.add_url_rule('/categories/dissolve', view_func=self.book_handler.remove_joint_categories, methods=['POST'])
+		app.add_url_rule('/categories/join/get', view_func=self.book_handler.get_joint_categories, methods=['POST'])
 		### ? account routes
-		app.add_url_rule('/signup', view_func=self.account_handler.signup, methods=['POST'])
-		app.add_url_rule('/login', view_func=self.account_handler.login, methods=['POST'])
-		app.add_url_rule('/update_accounts', view_func=self.account_handler.update_accounts, methods=['POST'])
-		app.add_url_rule('/delete_accounts', view_func=self.account_handler.delete_accounts, methods=['POST'])
-		app.add_url_rule('/get_accounts', view_func=self.account_handler.get_accounts, methods=['POST'])
-		app.add_url_rule('/fetch_accounts', view_func=self.account_handler.fetch_accounts, methods=['POST'])
+		app.add_url_rule('/accounts/login', view_func=self.account_handler.login, methods=['POST'])
+		app.add_url_rule('/accounts/fetch', view_func=self.account_handler.fetch_accounts, methods=['POST'])
+		app.add_url_rule('/accounts/get', view_func=self.account_handler.get_accounts, methods=['POST'])
+		app.add_url_rule('/accounts/insert', view_func=self.account_handler.signup, methods=['POST'])
+		app.add_url_rule('/accounts/update', view_func=self.account_handler.update_accounts, methods=['POST'])
+		app.add_url_rule('/accounts/delete', view_func=self.account_handler.delete_accounts, methods=['POST'])
 		# ? user type routes
-		app.add_url_rule('/add_user_types', view_func=self.account_handler.add_user_types, methods=['POST'])
-		app.add_url_rule('/fetch_user_types', view_func=self.account_handler.fetch_user_types, methods=['POST'])
-		app.add_url_rule('/update_user_types', view_func=self.account_handler.update_user_types, methods=['POST'])
-		app.add_url_rule('/get_user_types', view_func=self.account_handler.get_user_types, methods=['GET'])
-		app.add_url_rule('/delete_user_types', view_func=self.account_handler.delete_user_types, methods=['POST'])
+		app.add_url_rule('/usertype/fetch', view_func=self.account_handler.fetch_user_types, methods=['POST'])
+		app.add_url_rule('/usertype/insert', view_func=self.account_handler.insert_user_types, methods=['POST'])
+		app.add_url_rule('/usertype/update', view_func=self.account_handler.update_user_types, methods=['POST'])
+		app.add_url_rule('/usertype/get-get', view_func=self.account_handler.get_user_types, methods=['GET'])
+		app.add_url_rule('/usertype/delete', view_func=self.account_handler.delete_user_types, methods=['POST'])
+		app.add_url_rule('/usertype/get', view_func=self.account_handler.get_user_type_by_id, methods=['POST'])
 		# ? records routes
-		app.add_url_rule('/get_records_book_copies', view_func=self.book_handler.get_records_book_copies, methods=['GET'])
-		app.add_url_rule('/get_records_borrowed_books', view_func=self.book_handler.get_records_borrowed_books, methods=['GET'])
-		app.add_url_rule('/get_records_user', view_func=self.book_handler.get_records_user, methods=['GET'])
-		app.add_url_rule('/get_records_category', view_func=self.book_handler.get_records_category, methods=['GET'])
+		app.add_url_rule('/records/copies', view_func=self.book_handler.get_records_book_copies, methods=['POST'])
+		app.add_url_rule('/records/borrow', view_func=self.book_handler.get_records_borrowed_books, methods=['POST'])
+		app.add_url_rule('/records/user', view_func=self.book_handler.get_records_user, methods=['POST'])
+		app.add_url_rule('/records/assigned', view_func=self.book_handler.get_records_category, methods=['POST'])
 
 		# ? static files
 		app.add_url_rule('/qr/<path:filename>', view_func=self.get_file, methods=['GET'])
@@ -74,7 +78,7 @@ class MainServer:
 		app.add_url_rule('/get_available_clients', view_func=self.get_available_clients, methods=['GET'])
 		app.add_url_rule('/request_books', view_func=self.book_handler.request_books, methods=['POST'])
 		app.add_url_rule('/request_borrow_on_client', view_func=self.request_borrow_on_client, methods=['POST'])
-
+		
 	def backup_thread(self):
 		while True:
 			time.sleep(self.backup_delay)

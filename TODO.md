@@ -53,3 +53,10 @@
   > (full name, role, email, borrowed books)
 - [x] categories
   > (category, books available)
+
+### CATEGORY
+
+select books returns 2d array of book info
+select cateogories returns 2d array of categories
+select joint categories returns 2d arrays of category id and book using book id
+now, i wanna have 2d array of boolean where all are false for every categories except the one from joint category result

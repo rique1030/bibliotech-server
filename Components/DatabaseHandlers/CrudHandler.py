@@ -10,7 +10,7 @@ class CrudHandler:
                 cursor.executemany(query, data)
                 if fetch:
                     return {"success": True, "data": cursor.fetchall()}
-                return {"success": True, "message": f"{cursor.rowcount} rows affected."}
+                return {"success": True, "message": f"{cursor.rowcount} rows affected.", "rows_affected": cursor.rowcount, "lastrowid": cursor.lastrowid}
         except Error as err:
             return {"success": False, "message": f"Error: {err}"}
 
@@ -20,7 +20,7 @@ class CrudHandler:
                 cursor.execute(query, data)
                 if fetch:
                     return {"success": True, "data": cursor.fetchall()}
-                return {"success": True, "message": f"{cursor.rowcount} rows affected."}
+                return {"success": True, "message": f"{cursor.rowcount} rows affected.", "rows_affected": cursor.rowcount, "lastrowid": cursor.lastrowid}
         except Error as err:
             print("execute_query error: ", err)
             return {"success": False, "message": f"Error: {err}" }

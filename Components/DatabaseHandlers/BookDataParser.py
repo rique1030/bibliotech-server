@@ -8,12 +8,7 @@ class BookDataParser:
         print(f"Filter Term: {filter_term}, Search Term: {search_term}")
         if not search_term or not filter_term:
             return "", []
-        filters = {
-            "acc_num": "access_number",
-            "call_num": "call_number"
-        }
-        filter_by = filters.get(filter_term, filter_term)
-        return f"WHERE {filter_by} LIKE %s", [f"%{search_term}%"]
+        return f"WHERE {filter_term} LIKE %s", [f"%{search_term}%"]
         
     def parse_book_insertion_data(self, book_data):
         book_array = []
@@ -33,13 +28,15 @@ class BookDataParser:
         book_array = []
         for book in book_data:
                 book_array.append((
-                    book['access_number'],
-                    book['call_number'],
-                    book['title'],
-                    book['author'],
-                    book['status'],
-                    book['id'])
+                    book[1],
+                    book[2],
+                    book[3],
+                    book[4],
+                    f"{book[1]}_{book[2]}.png",
+                    book[6],
+                    book[0])
                     )
+        print(book_array)
         return book_array
         
     def delete_books(self, book_ids):
