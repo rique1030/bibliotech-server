@@ -161,7 +161,21 @@ class RECORD_QUERIES:
     SELECT_COPIES_AVAILABLE = "SELECT title, author, COUNT(*) AS copy_count FROM books  {search_filter}  GROUP BY title, author LIMIT %s OFFSET %s;"
 
     SELECT_BORROWED_RECORDS = """
-    select * from borrowed_books {search_filter} LIMIT %s OFFSET %s;
+    SELECT 
+        books.title,
+        accounts.username,
+        borrowed_books.borrowed_date,
+        borrowed_books.due_date,
+        borrowed_books.status
+    FROM 
+        borrowed_books
+    JOIN 
+        books ON borrowed_books.book_id = books.id
+    JOIN 
+        accounts ON borrowed_books.username = accounts.username
+    {search_filter}
+    LIMIT %s OFFSET %s;
+
     """
 
     SELECT_USER_RECORDS = """
