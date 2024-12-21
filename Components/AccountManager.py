@@ -41,6 +41,8 @@ class AccountManager:
         data = request.get_json()
         self.debug_print(data, "login")
         account = self.acc.parse_account_select_data(data["account"])
+        if "role" in data["account"]:
+            return self.crud.execute_query(ACCOUNT_HANDLER_QUERIES.SELECT_ACCOUNTS_BY_USERNAME_AND_PASSWORD_USER, account, fetch=True)
         return self.crud.execute_query(ACCOUNT_HANDLER_QUERIES.SELECT_ACCOUNTS_BY_USERNAME_AND_PASSWORD,account, fetch=True)
     
     def update_accounts(self):
@@ -113,7 +115,10 @@ class AccountManager:
         return self.crud.execute_query(ACCOUNT_HANDLER_QUERIES.DELETE_ACCOUNT_TYPE.format(placeholders=placeholders), data)
     
     def get_account_by_id(self, account_id):
-        return self.crud.execute_query(ACCOUNT_HANDLER_QUERIES.SELECT_ACCOUNT_BY_ID, (account_id,), fetch=True)
+        placeholders = ",".join(["%s"] * len([account_id]))
+        result = self.crud.execute_query(ACCOUNT_HANDLER_QUERIES.SELECT_ACCOUNT_BY_ID.format(placeholders=placeholders), [account_id], fetch=True)
+        self.debug_print(result, "get_account_by_id")
+        return  result
     
     def debug_print(self, data , function_name):
         print(f"Function: {function_name}")

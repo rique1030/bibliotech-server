@@ -13,11 +13,13 @@ class QRManager:
         )
     
     def generate_qr_code(self, data):
+        self.qr.clear()
         self.qr.add_data(data)
         self.qr.make(fit=True)
         img = self.qr.make_image(fill_color="black", back_color="white")
         if data.endswith(".png"):
             data = data[:-4]
+            print(data)
         img.save(os.path.join(self.QR_CODE_PATH, f"{data}.png"))
         return f"{data}.png"
     

@@ -39,6 +39,7 @@ class BookManager:
             return result
         if result["rows_affected"] > 0:
             for book in new_books:
+                print("qrcode book", book)
                 self.qr.generate_qr_code(book[4])
             if result["lastrowid"]:
                 ids = [result["lastrowid"] + i for i in range(result["rows_affected"])]
@@ -187,10 +188,11 @@ class BookManager:
         book_ids = data["book_info"]
         if not book_ids:
             return {"success": False, "message": "No book ids provided."}
+        book_ids = book_ids[:-4]
         book_ids = book_ids.split("_")
         result = self.crud.execute_query(BOOK_HANDLER_QUERIES.REQUEST_BOOK, tuple(book_ids), fetch=True)
         return result
-    
+        
     def get_book_by_id(self):
         data = request.get_json()
         self.debug_print(data, "get_book_by_id")
@@ -200,14 +202,23 @@ class BookManager:
         result = self.crud.execute_query(BOOK_HANDLER_QUERIES.SELECT_BOOK_BY_ID.format(placeholders=placeholders), data, fetch=True)
         return result
     
+    def get_book_by_id_for_borrow(self, book_id):
+        placeholders = ",".join(["%s"] * len([book_id]))
+        result = self.crud.execute_query(BOOK_HANDLER_QUERIES.SELECT_BOOK_BY_ID.format(placeholders=placeholders), [book_id], fetch=True)
+        print("result", result)
+        return result
+    
     def accept_request(self):
         data = request.get_json()
         book_id = data["book_id"]
+        print("book_id", book_id)
         username = data["username"]
-
+        print("username", username)
         days = data["days"]
+        print("days", days)
 
-        book = self.get_book_by_id(book_id)["data"][0]
+        book = self.get_book_by_id_for_borrow(book_id)["data"][0]
+        print("book", book)
         book = (
             book[1],
             book[2],
@@ -218,6 +229,7 @@ class BookManager:
             book[0]
         )
         update = self.crud.execute_query(BOOK_HANDLER_QUERIES.UPDATE_BOOK_STATUS, book)
+        
         insert = self.crud.execute_query(BOOK_HANDLER_QUERIES.INSERT_BORROWED_BOOK, (book_id, username, days))
         return {"success": update["success"] and insert["success"], "message": update["message"] + " " + insert["message"]}
     
@@ -257,6 +269,13 @@ class BookManager:
         print("params", params)
         result = self.crud.execute_query(query, params, fetch=True)
         return result
+
+    def fetch_borrow(self):
+        data = request.get_json()
+        self.debug_print(data, "fetch_borrow")
+        username = data["username"]
+        result = self.crud.execute_query(BOOK_HANDLER_QUERIES.SELECT_BORROWED_BOOKS_BY_USERNAME, (username,), fetch=True)   
+        return result     
 
     def debug_print(self, data , function_name):
         print("+=================================")

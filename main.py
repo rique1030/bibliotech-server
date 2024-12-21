@@ -39,6 +39,7 @@ class MainServer:
 		app.add_url_rule('/books/update', view_func=self.book_handler.update_books, methods=['POST'])
 		app.add_url_rule('/books/delete', view_func=self.book_handler.delete_books, methods=['POST'])
 		app.add_url_rule('/request/accept', view_func=self.book_handler.accept_request, methods=['POST'])
+		app.add_url_rule('/borrow/fetch', view_func=self.book_handler.fetch_borrow, methods=['POST'])
 		# ? category routes
 		app.add_url_rule('/categories/insert', view_func=self.book_handler.insert_categories, methods=['POST'])
 		app.add_url_rule('/categories/get-get', view_func=self.book_handler.get_categories, methods=['GET'])
@@ -73,6 +74,7 @@ class MainServer:
 		app.add_url_rule('/qr/<path:filename>', view_func=self.get_file, methods=['GET'])
 		# ? client routes
 		self.socketio.on_event('connect', self.handle_connect)
+		self.socketio.on_event('disconnect', self.handle_disconnect)
 
 		# ? user routes
 		app.add_url_rule('/get_available_clients', view_func=self.get_available_clients, methods=['GET'])
@@ -91,18 +93,27 @@ class MainServer:
 	
 	def handle_connect(self):
 		client_id = request.args.get('client_id')  # Or use socketio's event data instead
-		self.available_clients[request.sid] = client_id
+		self.available_clients[client_id] = request.sid
 		print(f"Client connected: {request.sid} (Client ID: {client_id})")
 
+	def handle_disconnect(self):
+		client_id = self.available_clients.pop(request.sid, None)
+		print(f"Client disconnected: {request.sid} (Client ID: {client_id})")
 
 	def request_borrow_on_client(self):
 		data  = request.get_json()
 		book_id = data['book_id']
 		user_id = data['user_id']
-		data = self.book_handler.get_book_by_id(book_id)
+		client_id = data['client_id']
+		print("request_borrow_on_client", book_id, user_id)
+		data = self.book_handler.get_book_by_id_for_borrow(book_id)
 		user = self.account_handler.get_account_by_id(user_id)
-		self.socketio.emit('request_borrow', {'book': data, 'user_id': user}, namespace='/')
-		return {"success": True}
+		if client_id in self.available_clients:
+			socket_id = self.available_clients[client_id]
+			self.socketio.emit('request_borrow', {'book': data, 'user': user}, room=socket_id, namespace='/')
+			return {"success": True}
+		else:
+			return {"error": "User not connected"}, 400
 		
 
 	def get_available_clients(self):
@@ -113,5 +124,5 @@ class MainServer:
 if __name__ == "__main__":
 	server = MainServer()
 	server.handler.create_database()
-	server.socketio.run(app, host='0.0.0.0', port=5000)
+	server.socketio.run(app, host='0.0.0.0', port=5000 , debug=True)
 	# app.run(host="0.0.0.0", port=5000)

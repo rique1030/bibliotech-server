@@ -19,10 +19,12 @@ class ACCOUNT_HANDLER_QUERIES:
     """
     COUNT_ACCOUNTS = "SELECT COUNT(*) FROM accounts {search_filter}"
     SELECT_ACCOUNT_BY_ID = "SELECT * FROM accounts WHERE id IN ({placeholders})"
+    SELECT_ACCOUNT_BY_ID_FOR_BORROW = "SELECT * FROM accounts WHERE id = %s;"
     SELECT_ACCOUNT_TYPES_BY_ID = "SELECT * FROM user_type WHERE user_type_id IN ({placeholders})"
     SELECT_ACCOUNTS_BY_USERNAME = "SELECT * FROM accounts WHERE username = %s"
     SELECT_ACCOUNTS_BY_EMAIL = "SELECT * FROM accounts WHERE email = %s"
-    SELECT_ACCOUNTS_BY_USERNAME_AND_PASSWORD = "SELECT * FROM accounts WHERE username = %s AND password = %s"
+    SELECT_ACCOUNTS_BY_USERNAME_AND_PASSWORD = "SELECT * FROM accounts WHERE email = %s AND password = %s AND user_type_id != 2"
+    SELECT_ACCOUNTS_BY_USERNAME_AND_PASSWORD_USER = "SELECT * FROM accounts WHERE email = %s AND password = %s AND user_type_id = 2"
     UPDATE_ACCOUNTS = "UPDATE accounts SET username = %s, password = %s, email = %s, user_type_id = %s WHERE id = %s"
     UPDATE_ACCOUNT_PASSWORD = "UPDATE accounts SET password = %s WHERE username = %s"
     DELETE_ACCOUNT = "DELETE FROM accounts WHERE id = %s"
@@ -40,6 +42,7 @@ class BOOK_HANDLER_QUERIES:
     SELECT_BOOKS_BY_AUTHOR = "SELECT * FROM books WHERE author LIKE %s"
     SELECT_BOOKS_BY_ACC_NUM = "SELECT * FROM books WHERE access_number LIKE %s"
     SELECT_BOOK_BY_ID = "SELECT * FROM books WHERE id IN ({placeholders})"
+    SELECT_BOOK_BY_ID_FOR_BORROW = "SELECT * FROM books WHERE id = %s;"
     SELECT_QR_CODE_NAME = "SELECT qr_code_path FROM books WHERE id IN ({placeholders})"
     REQUEST_BOOK = "SELECT id FROM books WHERE access_number = %s AND call_number = %s"
 
@@ -47,6 +50,18 @@ class BOOK_HANDLER_QUERIES:
     UPDATE_BOOK_STATUS = "UPDATE books SET access_number = %s, call_number = %s, title = %s, author = %s, qr_code_path = %s,  status = %s WHERE id = %s"
     DELETE_BOOK = "DELETE FROM books WHERE id IN ({placeholders})"
     COUNT_BOOKS = "SELECT COUNT(*) FROM books {search_filter}" 
+    SELECT_BORROWED_BOOKS_BY_USERNAME = """
+    SELECT 
+    books.title, 
+    borrowed_books.due_date, 
+    DATEDIFF(borrowed_books.due_date, CURDATE()) AS days_left 
+FROM 
+    borrowed_books 
+LEFT JOIN 
+    books ON borrowed_books.book_id = books.id 
+WHERE 
+    username = %s;
+    """
 
     INSERT_CATEGORY = "INSERT INTO categories (name) VALUES (%s)"
     FETCH_CATEGORIES = "SELECT * FROM categories {search_filter} LIMIT %s OFFSET %s"
