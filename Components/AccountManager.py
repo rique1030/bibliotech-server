@@ -29,7 +29,6 @@ class AccountManager:
     def validate_email_and_username(self, account):
         username = (account[0],)
         email = (account[2],)
-        
         email_validation = self.crud.execute_query(ACCOUNT_HANDLER_QUERIES.SELECT_ACCOUNTS_BY_EMAIL, email , fetch=True)
         if email_validation['success'] and email_validation['data']:  return {"success": False, "error": "Email is already in use."}
 
@@ -39,11 +38,13 @@ class AccountManager:
 
     def login(self):
         data = request.get_json()
-        self.debug_print(data, "login")
-        account = self.acc.parse_account_select_data(data["account"])
-        if "role" in data["account"]:
-            return self.crud.execute_query(ACCOUNT_HANDLER_QUERIES.SELECT_ACCOUNTS_BY_USERNAME_AND_PASSWORD_USER, account, fetch=True)
-        return self.crud.execute_query(ACCOUNT_HANDLER_QUERIES.SELECT_ACCOUNTS_BY_USERNAME_AND_PASSWORD,account, fetch=True)
+        account = (data['email'], data['password'])
+        result = None        
+        if "role" in data:
+            result = self.crud.execute_query(ACCOUNT_HANDLER_QUERIES.SELECT_ACCOUNTS_BY_USERNAME_AND_PASSWORD_USER, account, fetch=True)
+        else: result = self.crud.execute_query(ACCOUNT_HANDLER_QUERIES.SELECT_ACCOUNTS_BY_USERNAME_AND_PASSWORD,account, fetch=True)
+        print(result)
+        return result
     
     def update_accounts(self):
         data = request.get_json()

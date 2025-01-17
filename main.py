@@ -2,94 +2,61 @@ from flask import Flask, send_from_directory, request
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from Components.config import *
-from Components.BookManager import BookManager
-from Components.AccountManager import AccountManager
-from Components.DatabaseManager import DatabaseManager
-import threading
+from Components.db import Database
+from Components.managers.roles import RoleManager
+from Components.managers.books import BookManager
+from Components.managers.categories import CategoryManager
+from Components.managers.book_categories import BookCategoryManager
+from Components.managers.user import UserManager
+import os
 import time
+import random
 
 app = Flask(__name__, static_folder="./storage")
 
 CORS(app)
 
-
-
 class MainServer:
 	def __init__(self):
+		os.system('cls' if os.name == 'nt' else 'clear')
 		self.app = app
 		self.socketio = SocketIO(self.app)
 		
-		self.backup_delay = HOURS_PER_BACKUP * 60 * 60 # 24 hours
-		self.book_handler = BookManager()
-		self.account_handler = AccountManager()
-		self.handler = DatabaseManager()
+		self.db = Database()
+
+		self.role_manager = RoleManager(self.app, self.db)
+		self.user_manager = UserManager(self.app, self.db)
+		self.book_manager = BookManager(self.app, self.db)
+		self.category_manager = CategoryManager(self.app, self.db)
+		self.book_category_manager = BookCategoryManager(self.app, self.db)
 
 		# ? clients
 		self.available_clients = {}
 		self.ping_interval = 30 # seconds
-		#start backup thread
-		threading.Thread(target=self.backup_thread, daemon=True).start()
 
 		#routes
-
-		### ? book routes
-		app.add_url_rule('/books/fetch', view_func=self.book_handler.get_books, methods=['POST'])
-		app.add_url_rule('/books/get', view_func=self.book_handler.get_book_by_id, methods=['POST'])
-		app.add_url_rule('/books/insert', view_func=self.book_handler.insert_books, methods=['POST'])
-		app.add_url_rule('/books/update', view_func=self.book_handler.update_books, methods=['POST'])
-		app.add_url_rule('/books/delete', view_func=self.book_handler.delete_books, methods=['POST'])
-		app.add_url_rule('/request/accept', view_func=self.book_handler.accept_request, methods=['POST'])
-		app.add_url_rule('/borrow/fetch', view_func=self.book_handler.fetch_borrow, methods=['POST'])
-		# ? category routes
-		app.add_url_rule('/categories/insert', view_func=self.book_handler.insert_categories, methods=['POST'])
-		app.add_url_rule('/categories/get-get', view_func=self.book_handler.get_categories, methods=['GET'])
-		app.add_url_rule('/categories/get', view_func=self.book_handler.get_category_by_id, methods=['POST'])
-		app.add_url_rule('/categories/fetch', view_func=self.book_handler.fetch_categories, methods=['POST'])
-		app.add_url_rule('/categories/update', view_func=self.book_handler.update_categories, methods=['POST'])
-		app.add_url_rule('/categories/delete', view_func=self.book_handler.delete_categories, methods=['POST'])
-		app.add_url_rule('/categories/join', view_func=self.book_handler.add_joint_categories, methods=['POST'])
-		app.add_url_rule('/categories/dissolve', view_func=self.book_handler.remove_joint_categories, methods=['POST'])
-		app.add_url_rule('/categories/join/get', view_func=self.book_handler.get_joint_categories, methods=['POST'])
-		### ? account routes
-		app.add_url_rule('/accounts/login', view_func=self.account_handler.login, methods=['POST'])
-		app.add_url_rule('/accounts/fetch', view_func=self.account_handler.fetch_accounts, methods=['POST'])
-		app.add_url_rule('/accounts/get', view_func=self.account_handler.get_accounts, methods=['POST'])
-		app.add_url_rule('/accounts/insert', view_func=self.account_handler.signup, methods=['POST'])
-		app.add_url_rule('/accounts/update', view_func=self.account_handler.update_accounts, methods=['POST'])
-		app.add_url_rule('/accounts/delete', view_func=self.account_handler.delete_accounts, methods=['POST'])
-		# ? user type routes
-		app.add_url_rule('/usertype/fetch', view_func=self.account_handler.fetch_user_types, methods=['POST'])
-		app.add_url_rule('/usertype/insert', view_func=self.account_handler.insert_user_types, methods=['POST'])
-		app.add_url_rule('/usertype/update', view_func=self.account_handler.update_user_types, methods=['POST'])
-		app.add_url_rule('/usertype/get-get', view_func=self.account_handler.get_user_types, methods=['GET'])
-		app.add_url_rule('/usertype/delete', view_func=self.account_handler.delete_user_types, methods=['POST'])
-		app.add_url_rule('/usertype/get', view_func=self.account_handler.get_user_type_by_id, methods=['POST'])
-		# ? records routes
-		app.add_url_rule('/records/copies', view_func=self.book_handler.get_records_book_copies, methods=['POST'])
-		app.add_url_rule('/records/borrow', view_func=self.book_handler.get_records_borrowed_books, methods=['POST'])
-		app.add_url_rule('/records/user', view_func=self.book_handler.get_records_user, methods=['POST'])
-		app.add_url_rule('/records/assigned', view_func=self.book_handler.get_records_category, methods=['POST'])
-
-		# ? static files
-		app.add_url_rule('/qr/<path:filename>', view_func=self.get_file, methods=['GET'])
-		# ? client routes
-		self.socketio.on_event('connect', self.handle_connect)
-		self.socketio.on_event('disconnect', self.handle_disconnect)
-
-		# ? user routes
-		app.add_url_rule('/get_available_clients', view_func=self.get_available_clients, methods=['GET'])
-		app.add_url_rule('/request_books', view_func=self.book_handler.request_books, methods=['POST'])
-		app.add_url_rule('/request_borrow_on_client', view_func=self.request_borrow_on_client, methods=['POST'])
+		# app.before_request(self.before_request)
 		
-	def backup_thread(self):
-		while True:
-			time.sleep(self.backup_delay)
-			print("Backing up database...")
-			self.handler.backup_database()
-			print("Database backup completed")
+		# ? static files
+		app.add_url_rule('/<path:filename>', view_func=self.get_file, methods=['GET'])
+		#app.add_url_rule('/<path:filename>', view_func=self.get_file, methods=['GET'])
+		# # ? client routes
+		# self.socketio.on_event('connect', self.handle_connect)
+		# self.socketio.on_event('disconnect', self.handle_disconnect)
+
+		# # ? user routes
+		# app.add_url_rule('/get_available_clients', view_func=self.get_available_clients, methods=['GET'])
+		# app.add_url_rule('/request_books', view_func=self.book_handler.request_books, methods=['POST'])
+		# app.add_url_rule('/request_borrow_on_client', view_func=self.request_borrow_on_client, methods=['POST'])
+	
+	
+	def before_request(self):
+		delay = random.uniform(0.5, 2)  # 500ms to 2000ms
+		time.sleep(delay)  # Adding delay to simulate throttl
+
 
 	def get_file(self, filename):
-		return send_from_directory('./storage/qr-codes/', filename)
+		return send_from_directory('./storage/', filename)
 	
 	def handle_connect(self):
 		client_id = request.args.get('client_id')  # Or use socketio's event data instead
@@ -123,6 +90,4 @@ class MainServer:
 
 if __name__ == "__main__":
 	server = MainServer()
-	server.handler.create_database()
 	server.socketio.run(app, host='0.0.0.0', port=5000 , debug=True)
-	# app.run(host="0.0.0.0", port=5000)

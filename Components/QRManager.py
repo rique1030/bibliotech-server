@@ -13,18 +13,41 @@ class QRManager:
         )
     
     def generate_qr_code(self, data):
-        self.qr.clear()
-        self.qr.add_data(data)
-        self.qr.make(fit=True)
-        img = self.qr.make_image(fill_color="black", back_color="white")
-        if data.endswith(".png"):
-            data = data[:-4]
-            print(data)
-        img.save(os.path.join(self.QR_CODE_PATH, f"{data}.png"))
-        return f"{data}.png"
-    
+        try:
+            for book in data:
+                self.qr.clear()
+                self.qr.add_data(book["qrcode"])
+                self.qr.make(fit=True)
+                img = self.qr.make_image(fill_color="black", back_color="white")
+                img.save(os.path.join(self.QR_CODE_PATH, f"{book['qrcode']}.png"))
+        except Exception as e:
+            return False
+        return True
+
+    def add_code(self, data):
+        for book in data:
+            access_number = book.get("access_number")
+            call_number = book.get("call_number")
+            if access_number is None or call_number is None:
+                return [False, None]
+            qrcode = f"{access_number}_{call_number}"
+            book["qrcode"] = qrcode
+        return [True, data]
+
+
+    def update_code(self, data):
+        for book in data:
+            self.delete_qr_code(book.get("qrcode"))
+            access_number = book.get("access_number")
+            call_number = book.get("call_number")
+            if access_number is None or call_number is None:
+                return [False, None]
+            qrcode = f"{access_number}_{call_number}"
+            book["qrcode"] = qrcode
+        return [True, data]
+
     def delete_qr_code(self, image_name):
-        qr_code_path = os.path.join(self.QR_CODE_PATH, f"{image_name}")
+        qr_code_path = os.path.join(self.QR_CODE_PATH, f"{image_name}.png")
         if os.path.exists(qr_code_path):
             os.remove(qr_code_path)
             print(f"QR code deleted: {qr_code_path}")

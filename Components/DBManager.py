@@ -1,19 +1,27 @@
-import mariadb
 import os
 import datetime
-print("mariadb version: ",mariadb.__version__)
+from .config import *
+SQL_CONNECTION = None
+
+if DEPLOYMENT_MODE == DeploymentMode.DEVELOPMENT:
+	import mariadb as sql
+	SQL_CONNECTION = DEVELOPMENT_CONFIG
+else:
+	import pymysql as sql
+	SQL_CONNECTION = PRODUCTION_CONFIG
+print("sql version: ",sql.__version__)
 
 class DBCreationConnectionManager:
 	def __init__(self):		
-		self.host = "localhost"
-		self.user = "root"  # Adjust username if needed
-		self.password = os.getenv('db_password')
+		self.host = SQL_CONNECTION['DB_HOST']
+		self.user = SQL_CONNECTION['DB_USER'] # Adjust username if needed
+		#self.password = os.getenv('db_password')
 		# Assert that the password is not None (i.e., it is set)
 		assert self.password is not None, "Environment variable 'db_password' is not set!"
 
 	def __enter__(self):
-		# Establish connection to the MySQL/MariaDB server
-		self.conn = mariadb.connect(
+		# Establish connection to the MySQL/sql server
+		self.conn = sql.connect(
 			host= self.host,
 			user= self.user,
 			password=self.password
@@ -31,13 +39,13 @@ class DBConnectionManager:
 		self.host = "localhost"
 		self.user = "root"  # Adjust username if needed
 		self.password = os.getenv('db_password')
-		self.database = "bibliotech_db"
+		self.database = "bibliotech_planestill"
 		# Assert that the password is not None (i.e., it is set)
 		assert self.password is not None, "Environment variable 'db_password' is not set!"
 
 	def __enter__(self):
-		# Establish connection to the MySQL/MariaDB server
-		self.conn = mariadb.connect(
+		# Establish connection to the MySQL/sql server
+		self.conn = sql.connect(
 			host= self.host,
 			user= self.user,
 			database=self.database,
@@ -51,10 +59,9 @@ class DBConnectionManager:
 
 class DBManager:
 	def __init__(self):
-		self.database = "BiblioTech_DB"
-		self.sql_file_path = "../Database/BiblioTech_DB_setup.sql"
+		self.database = "bibliotech_planestill"
+		self.sql_file_path = "../Database/bibliotech_planestill_setup.sql"
 		self.password = os.getenv('db_password')
-		# Create the database if it doesn't exist
 		os.makedirs(os.path.dirname(self.sql_file_path), exist_ok=True)
 
 	def backup_database(self):
@@ -68,7 +75,7 @@ class DBManager:
 			with DBCreationConnectionManager() as cursor:
 			# Create the database if it doesn't exist
 				cursor.execute(f"CREATE DATABASE IF NOT EXISTS {self.database} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
-		except mariadb.Error as err:
+		except sql.Error as err:
 			print(f"Error: {err}")
 
 	def create_books_table(self):
@@ -86,7 +93,7 @@ class DBManager:
 				"""
 				cursor.execute(sql)
 				print("Books table created.")
-		except mariadb.Error as err:
+		except sql.Error as err:
 			print(f"Error: {err}")
 
 
@@ -101,7 +108,7 @@ class DBRequestsHandler:
 				cursor.execute("SELECT COUNT(*) FROM books")
 				count = cursor.fetchone()[0]
 				return count
-		except mariadb.Error as err:
+		except sql.Error as err:
 			print(f"Error: {err}")
 			return None
 
@@ -120,7 +127,7 @@ class DBRequestsHandler:
 				cursor.executemany(sql, book_array)
 				return (f"{cursor.rowcount} books inserted successfully.")
 
-		except mariadb.Error as err:
+		except sql.Error as err:
 			return (f"Error while inserting data: {err}")
 
 	def select_books(self, page_index = 0, filter_term = None, search_term= None):
@@ -172,5 +179,5 @@ class DBRequestsHandler:
 
 				print(type(books))  # Debug print
 				return books  # Return the dictionary containing the list of books
-		except mariadb.Error as err:
+		except sql.Error as err:
 			return f"Error: {err}"

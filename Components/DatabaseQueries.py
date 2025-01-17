@@ -1,3 +1,23 @@
+class ACCOUNT:
+    class SELECT:
+        pass
+        # SELECT ALL ?
+        # SELECT BY ID
+        # SELECT BY EMAIL AND PASSWORD
+        # SELECT BY FILTER
+
+
+    pass
+
+class USERTYPE_QUERIES:
+    pass
+
+class BOOK_QUERIES:
+    pass
+
+class CATEGORY_QUERIES:
+    pass
+
 class ACCOUNT_HANDLER_QUERIES:
     INSERT_ACCOUNT = "INSERT INTO accounts (username, password, email, user_type_id) VALUES (%s, %s, %s, %s)"
     INSERT_ACCOUNT_TYPE = "INSERT INTO user_type (user_type, account, books, categories, usertypes) VALUES (%s , %s, %s, %s, %s)"
@@ -33,7 +53,6 @@ class ACCOUNT_HANDLER_QUERIES:
     INSERT_USER_TYPE = "INSERT INTO user_type (user_type) VALUES (%s)"
     SELECT_ACCOUNT_TYPES = "SELECT * FROM user_type"
     UPDATE_USER_TYPES = "UPDATE user_type SET user_type = %s, account = %s, books = %s, categories = %s, usertypes = %s WHERE user_type_id = %s"
-    # DELETE_ACCOUNT_TYPE = "DELETE FROM user_type WHERE user_type_id = %s"
     DELETE_ACCOUNT_TYPE = "DELETE FROM user_type WHERE user_type_id IN ({placeholders})"
 
 class BOOK_HANDLER_QUERIES:
@@ -126,6 +145,7 @@ class DATABASE_QUERIES:
         status ENUM('available', 'borrowed') DEFAULT 'available'
     );
     """
+    
     CREATE_CATEGORIES_TABLE = """
     CREATE TABLE IF NOT EXISTS categories (
         id INT AUTO_INCREMENT PRIMARY KEY,

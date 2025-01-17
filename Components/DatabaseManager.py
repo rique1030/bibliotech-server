@@ -1,19 +1,46 @@
-import mariadb
 from colorama import Fore, Style
+# TEST
+from sqlalchemy import create_engine 
+
 import os
 import datetime
 import inspect
+
+from .config import *
+SQL_CONNECTION = None
+
+if DEPLOYMENT_MODE == DeploymentMode.DEVELOPMENT:
+	import mariadb as sql
+	SQL_CONNECTION = DEVELOPMENT_CONFIG
+else:
+	import pymysql as sql
+	SQL_CONNECTION = PRODUCTION_CONFIG
+
 from .ContextManager import CreationContextManager, RequestContextManager
 from .DatabaseQueries import DATABASE_QUERIES, ACCOUNT_HANDLER_QUERIES
 
-print( Fore.GREEN + "mariadb version: ",mariadb.__version__ + Style.RESET_ALL)
+print( Fore.GREEN + "sql version: ",sql.__version__ + Style.RESET_ALL)
+
+
+# Credentials from config
+host = SQL_CONNECTION['DB_HOST']
+user = SQL_CONNECTION['DB_USER']
+port = SQL_CONNECTION['DB_PORT']
+password = SQL_CONNECTION['DB_PASSWORD']
+database = SQL_CONNECTION['DB_NAME']
 
 
 class DatabaseManager:
 	def __init__(self):
-		self.database = "bibliotech_db"
-		self.password = os.getenv('db_password')
 		self.default_user_types = [("Admin",1 , 1 , 1, 1), ("User", 0, 0 ,0 ,0)]
+		
+		connection_string = "mysql+pymysql://{user}:{password}@{host}:{port}/{database}".format(
+			user=user,
+			password=password,
+			host=host,
+			port=port,
+			database=database	
+		)
 
 	def backup_database(self):
 		backup_file = f"{self.database}_backup_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
@@ -40,7 +67,7 @@ class DatabaseManager:
 			with CreationContextManager() as cursor:
 				cursor.execute(DATABASE_QUERIES.CREATE_DATABASE.format(db_name=self.database))
 				print( Fore.GREEN + f"Database {self.database} created" + Style.RESET_ALL)
-		except mariadb.Error as err:
+		except sql.Error as err:
 			print( Fore.RED + "Database creation failed" + Style.RESET_ALL)
 			print( Fore.RED + f"Error: {err}" + Style.RESET_ALL)
 
@@ -49,7 +76,7 @@ class DatabaseManager:
 			with RequestContextManager() as cursor:
 				cursor.execute(query)
 				print( Fore.GREEN + f"Function: {inspect.currentframe().f_code.co_name} - {query_name} Table Created" + Style.RESET_ALL)
-		except mariadb.Error as err:
+		except sql.Error as err:
 			if hasattr(err, 'errno') and hasattr(err, 'msg'):
 				print( Fore.RED + f"Error Code: {err.errno}, Message: {err.msg}" + Style.RESET_ALL)
 			else:
@@ -63,7 +90,7 @@ class DatabaseManager:
 				(count,) = cursor.fetchone()
 				if count == 0:
 					cursor.executemany(insert_query, data)
-		except mariadb.Error as err:
+		except sql.Error as err:
 			print( Fore.RED + f"Table population failed  || Error: {err}" + Style.RESET_ALL)
 			print(Fore.BLUE + f"Executing query: {insert_query}" + Style.RESET_ALL)
 

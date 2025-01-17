@@ -1,6 +1,13 @@
 from ..ContextManager import RequestContextManager
 from ..DatabaseQueries import BOOK_HANDLER_QUERIES
-from mariadb import Error
+
+from ..config import *
+
+if DEPLOYMENT_MODE == DeploymentMode.DEVELOPMENT:
+    from mariadb import Error
+else:
+    from pymysql import Error
+
 from math import ceil
 
 class BookDataParser:
