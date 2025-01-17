@@ -1,1 +1,7 @@
 # ignores
+storage/qr-codes/**
+storage/images/book_covers/**
+storage/images/user_photos/**
+
+# allow
+storage/images/user_photos/default.png
