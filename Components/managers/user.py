@@ -60,21 +60,45 @@ class UserManager:
             data = request.get_json()
             email = data.get("email")
             password = data.get("password")
-            print(email, password)
             result = self.user_queries.get_user_by_email_and_password(email=email, password=password)
+            if len(result) > 0:
+                print(f"User logged in: {email}")
             return { "success": True, "data": result }
         
         @app.route("/users/update", methods=["POST"])
         def update_user():
             data = request.get_json()
+            user_images = []
+
+            for user in data:
+                image_id = f"{user['email']}"
+                if "profile_pic_buffer" in user:
+                    image = {
+                        "id" : image_id,
+                        "profile_buffer" : user["profile_pic_buffer"]
+                    }
+                    user_images.append(image)
+                    user["profile_pic"] = image_id
+                else:
+                    user["profile_pic"] = "default"
+
+                user.pop("created_at", None)
+                
             result = self.user_queries.update_users(data)
-            return { "success": True, "data": result }
+
+            for image in user_images:
+                self.im.add_image(image.get("profile_buffer"), f"user_photos/{image.get("id")}")
+            return result
         
         @app.route("/users/delete", methods=["POST"])
         def delete_users_by_id():
             data = request.get_json()
             accounts_to_delete = data.get("id")
+            users = self.user_queries.get_users_by_id(accounts_to_delete)
             result = self.user_queries.delete_users_by_id(accounts_to_delete)
+            for user in users:
+                if user.get("profile_pic") != "default":
+                    self.im.delete_image(f"user_photos/{user.get('email')}")
             return result
         
         

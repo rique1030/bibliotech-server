@@ -1,5 +1,5 @@
 # from flask import request
-from sqlalchemy import asc, desc
+from sqlalchemy import Row, asc, desc
 from sqlalchemy.orm import Session
 from sqlalchemy.inspection import inspect
 
@@ -45,9 +45,12 @@ class QueryHelper:
         offset = page * per_page
         query = query.offset(offset).limit(per_page)
         result = query.all()
+        # return { "data": self.model_to_dict(result), "total_count": total_count }
         return { "data": self.model_to_dict(result), "total_count": total_count }
                 
     def model_to_dict(self, model):
         if isinstance(model, list):
             return [self.model_to_dict(m) for m in model]
+        elif isinstance(model, Row):
+            return {column: model[column] for column in model.keys()}  
         return {c.key: getattr(model, c.key) for c in inspect(model).mapper.column_attrs}

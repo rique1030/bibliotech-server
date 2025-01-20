@@ -27,10 +27,9 @@ class QRManager:
     def add_code(self, data):
         for book in data:
             access_number = book.get("access_number")
-            call_number = book.get("call_number")
-            if access_number is None or call_number is None:
+            if access_number is None:
                 return [False, None]
-            qrcode = f"{access_number}_{call_number}"
+            qrcode = f"{access_number}"
             book["qrcode"] = qrcode
         return [True, data]
 

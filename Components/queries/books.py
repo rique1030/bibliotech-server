@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from .query_helper import QueryHelper
 from ..tables.models import Book
 from ..QRManager import QRManager
-
+from sqlalchemy import func
 class BookQueries:
     def __init__(self, session: Session):
         self.qr = QRManager()        
@@ -59,6 +59,64 @@ class BookQueries:
             self.session.rollback()
             raise e
         
+    def get_books_count(self,    
+            page: int = 0,
+            per_page:  int = 15,
+            filters: dict = None, 
+            order_by: str = "id", 
+            order_direction: str = "asc"
+            ):
+        """
+        Returns the number of books in the database.
+        """
+        try:
+            column = [ 
+                Book.call_number,
+                Book.title,
+                Book.author,
+                Book.publisher,
+                Book.status,
+                func.count(Book.id).label("copy_count")
+            ]
+
+            query = self.session.query(*column).group_by(Book.call_number, Book.title, Book.author, Book.publisher, Book.status)
+
+            # Handle search
+            if filters:
+                for column, value in filters.items():
+                    try:
+                        query = query.filter(getattr(Book, column).like(f"%{value}%"))
+                    except Exception as e:
+                        raise Exception(f"Invalid filter: {e}")
+            
+            
+            total_count = self.session.query(func.count().label("total_count")).select_from(query.subquery()).scalar()
+            # total_count = query.count()
+            # * pagination
+            offset = page * per_page
+            query = query.offset(offset).limit(per_page)
+            result = query.all()
+            
+            data = []
+            for row in result:
+                data.append({
+                    "call_number": row.call_number,
+                    "title": row.title,
+                    "author": row.author,
+                    "publisher": row.publisher,
+                    "status": row.status,
+                    "copy_count": row.copy_count
+                })
+            
+            return {
+                "total_count": total_count,
+                "data": data
+            }
+            
+            # return {"total_count": total_count, "data": self.query_helper.model_to_dict(result)}
+        except Exception as e:
+            self.session.rollback()
+            raise e
     
     def get_books_by_access_number(self, access_numbers: list) -> list:
         """

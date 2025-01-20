@@ -8,7 +8,7 @@ class UserQueries:
         self.session = session
         self.query_helper = QueryHelper(session)
         self.populate_user()
-
+        
     """
     Insert
     --------------------------------------------------
@@ -97,10 +97,14 @@ class UserQueries:
             self.session.commit()
 
             # Return the number of users updated
-            return len(user)
+            return {"success": True, "message": f"{len(user)} User{'' if len(user) == 1 else 's'} edited successfully"}
+        except IntegrityError as e:
+            self.session.rollback()
+            return {"success": False, "error": "One of the submitted users already exists with the same email."}
         except Exception as e:
             self.session.rollback()
-            raise e
+            print(e)
+            return {"success": False, "error": f"An unexpected error occurred"}
     
     """
     Delete

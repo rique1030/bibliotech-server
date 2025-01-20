@@ -12,7 +12,7 @@ class CategoryManager:
         def insert_multiple_categories():
             categories = request.get_json()
             result = self.category_queries.insert_multiple_categories(categories)
-            return { "success": True, "data": result }
+            return result
 
         @app.route("/categories/get_all", methods=["GET"])
         def get_all_categories():
@@ -41,13 +41,13 @@ class CategoryManager:
         def update_categories():
             data = request.get_json()
             result = self.category_queries.update_categories(data)
-            return { "success": True, "data": result }
+            return result
         
         @app.route("/categories/delete", methods=["POST"])
         def delete_categories_by_id():
             data = request.get_json()
             categories_to_delete = data.get("id")
             result = self.category_queries.delete_categories_by_id(categories_to_delete)
-            return { "success": True, "data": result }
+            return result
         
         

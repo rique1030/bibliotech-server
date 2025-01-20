@@ -107,8 +107,12 @@ class RoleQueries:
             self.session.query(Role).filter(Role.id.in_(role_ids)).delete()
             self.session.commit()
             return {"success": True, "message": f"{len(role_ids)} Role{'' if len(role_ids) == 1 else 's'} deleted successfully"}
+        except IntegrityError as e:
+            self.session.rollback()
+            return {"success": False, "error": "The role cannot be deleted because it is currently in use. Please remove it from all accounts before deleting."}
         except Exception as e:
             self.session.rollback()
+            print(e)
             return {"success": False, "error": f"An unexpected error occurred"}
 
 
@@ -138,7 +142,7 @@ class RoleQueries:
                         "categories_update": True, 
                         "categories_delete": True, 
                         "notes": "Default admin role",
-                        "color": "#00B8FF"
+                        "color": "#4caf50"
                     },
                     {
                         "id": 2,
@@ -160,7 +164,7 @@ class RoleQueries:
                         "categories_update": False, 
                         "categories_delete": False, 
                         "notes": "Default user role",
-                        "color": "#D000FF"
+                        "color": "#5b40e4"
                     },
                 ]
                 self.insert_multiple_roles(roles)

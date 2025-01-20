@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from .query_helper import QueryHelper
 from ..tables.models import Category
+from sqlalchemy.exc import IntegrityError
 
 class CategoryQueries:
     def __init__(self, session: Session):
@@ -20,10 +21,13 @@ class CategoryQueries:
             self.session.bulk_insert_mappings(Category, categories)
             self.session.commit()
             # Return the number of categories inserted
-            return len(categories)
+            return {"success": True, "message": f"{len(categories)} Category{'' if len(categories) == 1 else 's'} added successfully"}
+        except IntegrityError as e:
+            self.session.rollback()
+            return {"success": False, "error": "One of the submitted categories already exists with the same name."}
         except Exception as e:
             self.session.rollback()
-            raise e
+            return {"success": False, "error": f"An unexpected error occurred"}
     
     """
     Select
@@ -35,7 +39,10 @@ class CategoryQueries:
         Returns all categories from the database.
         """
         try:
-            return self.session.query(Category).all()
+            result = self.session.query(Category).all()
+            if result is None:
+                return []
+            return self.query_helper.model_to_dict(result)
         except Exception as e:
             self.session.rollback()
             raise e
@@ -87,10 +94,14 @@ class CategoryQueries:
             # TODO: add commit
             self.session.commit()
             # Return the number of categories updated
-            return len(categories)
+            return {"success": True, "message": f"{len(categories)} Category{'' if len(categories) == 1 else 's'} edited successfully"}
+        except IntegrityError as e:
+            self.session.rollback()
+            return {"success": False, "error": "One of the submitted categories already exists with the same name."}
         except Exception as e:
             self.session.rollback()
-            raise e
+            print(e)
+            return {"success": False, "error": f"An unexpected error occurred"}
     
     """
     Delete
@@ -106,8 +117,8 @@ class CategoryQueries:
             self.session.commit()
 
             # Return the number of categories deleted
-            return len(category_ids)
+            return {"success": True, "message": f"{len(category_ids)} Category{'' if len(category_ids) == 1 else 's'} deleted successfully"}
         except Exception as e:
             self.session.rollback()
-            raise e
+            return {"success": False, "error": f"An unexpected error occurred"}
 

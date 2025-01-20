@@ -1,6 +1,6 @@
 import re
 from enum import Enum
-from sqlalchemy.orm import declarative_base , relationship, validates
+from sqlalchemy.orm import declarative_base , relationship, validates, backref
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Enum  
 from sqlalchemy.sql import func 
 
@@ -48,21 +48,18 @@ class User(Base):
     email = Column(String(255), nullable=False, unique=True)
     password = Column(String(255), nullable=False)
     school_id = Column(String(10), nullable=False)
-    role_id = Column(Integer, ForeignKey('roles.id'), default=2, nullable=False)
+    role_id = Column(Integer, ForeignKey('roles.id'), server_default="2",  nullable=False)
     is_verified = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, nullable=False, default=func.now())
-    # is_active = Column(Boolean, nullable=False)
 
     role = relationship("Role", back_populates="users")
     borrowed_books = relationship("BorrowedBook", back_populates="user")
-    # audit_logs = relationship("AuditLog", back_populates="user")
-    # activities = relationship("UserActivity", back_populates="user")
 
 class Book(Base):
     __tablename__ = 'books'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    access_number = Column(String(255), nullable=False)
-    call_number = Column(String(255), nullable=False)
+    access_number = Column(String(255), nullable=False, unique=True)
+    call_number = Column(String(255), nullable=False )
     title = Column(String(255), nullable=False)
     author = Column(String(255), nullable=False, default="Unknown")
     publisher = Column(String(255), nullable=False, default="Unknown")
@@ -71,20 +68,25 @@ class Book(Base):
     qrcode = Column(String(255), nullable=False, unique=True)
     date_added = Column(DateTime, nullable=False, default=func.now())
     date_updated = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
-    status = Column(Enum('available', 'borrowed','overdue', 'lost', name='book_status'), nullable=False, default='available')
+    status = Column(Enum('available', 'borrowed', 'lost', name='book_status'), nullable=False, default='available')
 
     borrowed_books = relationship("BorrowedBook", back_populates="book")
     categories = relationship("BookCategory", back_populates="book")
-    # popularity = relationship("BookPopularity", back_populates="book")
-    # history = relationship("BookHistory", back_populates="book")
-    # inventory = relationship("BookInventory", back_populates="book")
-
+    popularity = relationship("BookPopularity", back_populates="book")
 
 class BookCategory(Base):
     __tablename__ = 'book_categories'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    book_id = Column(Integer, ForeignKey('books.id'), nullable=False)
-    category_id = Column(Integer, ForeignKey('categories.id'), nullable=False)
+    book_access_number = Column(
+        String(255), 
+        ForeignKey('books.access_number', ondelete="CASCADE"), 
+        nullable=False
+    )
+    category_id = Column(
+        Integer, 
+        ForeignKey('categories.id', ondelete="CASCADE"), 
+        nullable=False
+    )
 
     book = relationship("Book", back_populates="categories")
     category = relationship("Category", back_populates="books")
@@ -96,7 +98,12 @@ class Category(Base):
     name = Column(String(255), nullable=False, unique=True)
     description = Column(String(255), nullable=True)
     
-    books = relationship("BookCategory", back_populates="category")
+    books = relationship(
+        "BookCategory", 
+        back_populates="category", 
+        cascade="all, delete-orphan", 
+        passive_deletes=True
+    )
 
 class BorrowedBook(Base):
     __tablename__ = 'borrowed_books'
@@ -105,10 +112,18 @@ class BorrowedBook(Base):
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     borrowed_date = Column(DateTime, nullable=False)
     due_date = Column(DateTime, nullable=False)
-    status = Column(Enum('available', 'borrowed','overdue', 'lost', name='book_status'), nullable=False, default='available')
 
     book = relationship("Book", back_populates="borrowed_books")
     user = relationship("User", back_populates="borrowed_books")
+
+class BookPopularity(Base):
+    __tablename__ = 'book_popularity'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    book_id = Column(Integer, ForeignKey('books.id'), nullable=False)
+    borrow_count = Column(Integer, default=0, nullable=False)
+    last_borrowed = Column(DateTime, nullable=True)
+
+    book = relationship("Book", back_populates="popularity")
 
 
 
@@ -122,15 +137,6 @@ class BorrowedBook(Base):
 #     timestamp = Column(DateTime, default=func.now(), nullable=False)
 
 #     user = relationship("User", back_populates="audit_logs")
-
-# class BookPopularity(Base):
-#     __tablename__ = 'book_popularity'
-#     id = Column(Integer, primary_key=True, autoincrement=True)
-#     book_id = Column(Integer, ForeignKey('books.id'), nullable=False)
-#     borrow_count = Column(Integer, default=0, nullable=False)
-#     last_borrowed = Column(DateTime, nullable=True)
-
-#     book = relationship("Book", back_populates="popularity")
 
 # class BookInventory(Base):
 #     __tablename__ = 'book_inventory'
