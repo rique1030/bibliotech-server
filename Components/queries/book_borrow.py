@@ -22,7 +22,14 @@ class BorrowedBookQueries:
             "borrowed_date": datetime.now(),
             "due_date": datetime.now() + timedelta(days=span)
             }
+        
+        update_entry = {
+            "id": book.get("id"),
+            "status": "borrowed"
+        }
+
         try:
+            self.session.bulk_update_mappings(Book, [update_entry,])
             self.session.bulk_insert_mappings(BorrowedBook, [entry,])
             self.session.commit()
             # Return the number of book categories inserted
@@ -39,10 +46,16 @@ class BorrowedBookQueries:
     def delete_book_borrow_by_id(self, book: dict, user: dict):
         book_id = book.get("id")
         user_id = user.get("id")
+
+        update_entry = {
+            "id": book.get("id"),
+            "status": "available"
+        }
         """
         Deletes the borrowed book with the given ID from the database.
         """
         try:
+            self.session.bulk_update_mappings(Book, [update_entry,])
             self.session.query(BorrowedBook).filter(BorrowedBook.book_id == book_id, BorrowedBook.user_id == user_id).delete()
             self.session.commit()
             # Return the number of book categories deleted
@@ -65,7 +78,6 @@ class BorrowedBookQueries:
         try:
             BookAlias = aliased(Book)
             UserAlias = aliased(User)
-
 
             query = self.session.query(
                 BorrowedBook.id,

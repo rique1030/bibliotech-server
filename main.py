@@ -1,6 +1,10 @@
-from flask import Flask, json, send_from_directory, request
-from flask_cors import CORS
-from flask_socketio import SocketIO, emit
+from quart import Quart, json, send_from_directory, request
+# import quart
+import hypercorn.asyncio
+from hypercorn.config import Config
+import socketio
+import asyncio
+from quart_cors import cors
 from Components.config import *
 from Components.db import Database
 from Components.managers.records import RecordManager
@@ -12,26 +16,26 @@ from Components.managers.user import UserManager
 from Components.queries.book_borrow import BorrowedBookQueries
 import os
 import time
-import random
 import weakref
-import gevent.monkey
-
-gevent.monkey.patch_all()
 
 
-app = Flask(__name__, static_folder="./storage")
+# ? App
+app = Quart(__name__, static_folder="./storage")
+cors(app)
 
-CORS(app)
+# ? Use ASGI-compatible server
+sio = socketio.AsyncServer( async_mode='asgi', cors_allowed_origins="*")
+app.asgi_app = socketio.ASGIApp(sio, app.asgi_app) 
 
 class MainServer:
 	def __init__(self):
 		os.system('cls' if os.name == 'nt' else 'clear')
+		print("Initializing server...")
 		self.app = app
-		self.socketio = SocketIO(self.app)
+		self.socketio = sio
 		self.db = Database()
-		# ? ==============
-		# ? Database Managers
-		# ? ==============
+	
+		# Database Managers
 		self.role_manager = RoleManager(self.app, self.db)
 		self.user_manager = UserManager(self.app, self.db)
 		self.category_manager = CategoryManager(self.app, self.db)
@@ -53,49 +57,51 @@ class MainServer:
 		self.available_clients = {}
 		self.requests = {}
 		self.ping_interval = 30 # seconds
-		
-		# ? ==============
-		# ? static files
-		# ? ==============
-		app.add_url_rule('/<path:filename>', view_func=self.get_file, methods=['GET'])
 
 		# ? ==============
 		# ? websocket events
 		# ? ==============
-		self.socketio.on_event('connect', self.handle_connect)
-		self.socketio.on_event('disconnect', self.handle_disconnect)
-		self.socketio.on_event('client_connect', self.handle_client_connect)
-		self.socketio.on_event('request', self.handle_request)
-		self.socketio.on_event('review_request', self.handle_review_request)
-		self.socketio.on_event('accept_request', self.handle_accept_request)
-		self.socketio.on_event('deny_request', self.handle_deny_request)
+		self.socketio.on('connect', self.handle_connect)
+		self.socketio.on('disconnect', self.handle_disconnect)
+		self.socketio.on('client_connect', self.handle_client_connect)
+		self.socketio.on('request', self.handle_request)
+		self.socketio.on('review_request', self.handle_review_request)
+		self.socketio.on('accept_request', self.handle_accept_request)
+		self.socketio.on('deny_request', self.handle_deny_request)
 
-	# ? ==============
-	# ? private methods
-	# ? ==============
-	def before_request(self): # ? for debug purposes
-		delay = random.uniform(0.5, 2)  # 500ms to 2000ms
-		time.sleep(delay)  # Adding delay to simulate throttle
+	# ? ===============
+	# ? private methods 
+	# ? ===============
+	@app.before_serving
+	async def before_serving():
+		print("Starting the server...")
+
+	@app.route("/test_connection", methods=["GET"])
+	async def test():
+		return "Server is running as expected"
+
+	@app.route('/<path:filename>')
+	async def get_file(filename):
+		print(f"Requested file: {filename}")
+		return await send_from_directory(app.static_folder, filename)
 
 	def parse_request(self, data):
 		if isinstance(data, str):
 			return json.loads(data)
 		return data
 
-	def get_file(self, filename):
-		return send_from_directory('./storage/', filename)
-	
 	def handle_connect(self):
 		print(f"Incoming connection from: {request.sid}")
 
 	def handle_client_connect(self, data):
 		newData = self.parse_request(data)
+		print("Client data received")
 		newData["busy"] = False
 		self.available_clients[request.sid] = newData
-		
+	
 	def handle_disconnect(self):
 		client_id = self.available_clients.pop(request.sid, None)
-		print(f"Client disconnected: {request.sid} (Client ID: {client_id})")
+		print(f"Client disconnected: {request.sid} (Name: {client_id.get('first_name')} {client_id.get('last_name')})")
 
 	def verify_request_id(self, data):
 		if data is None:
@@ -118,32 +124,30 @@ class MainServer:
 			self.available_clients[user.get("receiver_id")]["busy"] = False
 			self.requests.pop(request_id)
 
-
-
 	def handle_accept_request(self, data):
 		newData = self.parse_request(data)
 		available, request_id = self.verify_request_id(newData)
 		if available:
 			user = self.requests[request_id]
 			type = user.get("type")
-			result = None
-			if type == "borrow":
-				days = newData.get("num_days")
-				result = self.book_borrow_query.insert_book_borrow(user.get("book"), user.get("user"), days)
-			elif type == "return":
-				result = self.book_borrow_query.delete_book_borrow_by_id(user.get("book"), user.get("user"))
-			if result.get("success") is False:
-				self.socketio.emit('request_denied', "Something went wrong", room=request_id, namespace='/')
+			try:
+				if type == "borrow":
+					days = newData.get("num_days")
+					result = self.book_borrow_query.insert_book_borrow(user.get("book"), user.get("user"), days)
+				elif type == "return":
+					result = self.book_borrow_query.delete_book_borrow_by_id(user.get("book"), user.get("user"))
+				if result.get("success") is False:
+					raise Exception(result.get("message"))
+				self.socketio.emit('request_accepted', "Request accepted", room=request_id, namespace='/')
+				self.available_clients[user.get("receiver_id")]["busy"] = False
+				self.requests.pop(request_id)
+				print("Request accepted")
+			except Exception as e:
+				self.socketio.emit('request_denied', str(e), room=request_id, namespace='/')
 				user = self.requests[request_id]
 				self.available_clients[user.get("receiver_id")]["busy"] = False
 				self.requests.pop(request_id)
 				print("Something went wrong")
-				return
-			self.socketio.emit('request_accepted', "Request accepted", room=request_id, namespace='/')
-			user = self.requests[request_id]
-			self.available_clients[user.get("receiver_id")]["busy"] = False
-			self.requests.pop(request_id)
-			print("Request accepted")
 
 	def handle_review_request(self, data):
 		newData = self.parse_request(data)
@@ -245,33 +249,49 @@ class MainServer:
 	def send_client_request(self, client_id, requester_id, data):
 		self.available_clients[client_id]["busy"] = True
 		self.socketio.emit('request_borrow', data, room=client_id, namespace='/')
-		gevent.spawn(self.timeout_thread, requester_id)
+		asyncio.create_task(self.timeout_thread(requester_id))
 		print(f"Request sent to client: {client_id} (Request ID: {requester_id})")
 
 	def timeout_thread(self, request_id):
-		current_time = 0
-		while current_time < 5:
-			if self.requests.get(request_id) is None:
-				break
-			if self.requests.get(request_id).get("accepted") is True:
-				break
-			time.sleep(1)
-			current_time += 1
-			print(f"Current time for request {request_id}: {current_time}")
-			print(f"Request status: {self.requests.get(request_id).get('accepted')}")
-		if self.requests.get(request_id).get("accepted") is False:
-			self.socketio.emit('request_timeout', {"error": "Request timed out"}, room=request_id, namespace='/')
-			client_id = self.requests.get(request_id).get("receiver_id")
-			self.available_clients[client_id]["busy"] = False
+		try:
+			timeout = 10
+			current_time = 0
+			is_accepted = False
+			while current_time < timeout:
+				if self.requests.get(request_id) is None:
+					raise Exception("Request not found")
+				if self.requests.get(request_id).get("accepted") is True:
+					if is_accepted is False:
+						is_accepted = True
+						timeout = 30
+						current_time = 0
+				time.sleep(1)
+				current_time += 1
+				print(f"Current time for request {request_id}: {current_time}")
+			if self.requests.get(request_id).get("accepted") is False:
+				raise Exception("Request timed out")
+		except Exception as e:
+			try:
+				self.available_clients[client_id]["busy"] = False
+			except Exception as e:
+				print(e)
+			client_id = self.requests.get(request_id)
+			if client_id is None: return
+			self.socketio.emit('request_timeout', {"error": str(e)}, room=request_id, namespace='/')
+			client_id = client_id.get("receiver_id")
 			self.requests.pop(request_id)
-			return
-		print(f"Request is being reviewed by client: {self.requests.get(request_id).get('receiver_id')} (Request ID: {request_id})")
 
 	def get_available_clients(self):
 		return self.available_clients
 
-
-
-if __name__ == "__main__":
+# if __name__ == "__main__":
+async def main():
 	server = MainServer()
-	server.socketio.run(app, host='0.0.0.0', port=5000 , debug=True)
+	await server.user_manager.user_queries.populate_user()
+	await server.role_manager.role_queries.populate_roles()
+	cofig = Config()
+	Config.bind = ["0.0.0.0:5000"]
+	# asyncio.run(hypercorn.asyncio.serve(server.app, config=cofig))
+	await hypercorn.asyncio.serve(server.app, config=cofig)
+
+asyncio.run(main())

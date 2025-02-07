@@ -1,12 +1,12 @@
-from flask import Flask , request
+from quart import Quart , request
 from ..db import Database
 from ..queries.categories import CategoryQueries
 class CategoryManager:
-    def __init__(self, app: Flask, db : Database):
+    def __init__(self, app: Quart, db : Database):
         self.category_queries = CategoryQueries(db.Session)
         self.register_routes(app)
 
-    def register_routes(self, app: Flask):
+    def register_routes(self, app: Quart):
         
         @app.route("/categories/insert", methods=["POST"])
         def insert_multiple_categories():

@@ -66,6 +66,7 @@ class CategoryQueries:
         except Exception as e:
             self.session.rollback()
             raise e
+    
 
     def get_categories_by_id(self, category_ids: list) -> list:
         """

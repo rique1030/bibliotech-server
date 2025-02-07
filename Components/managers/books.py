@@ -1,4 +1,4 @@
-from flask import Flask, json , request
+from quart import Quart, json , request
 
 from Components.managers.book_categories import BookCategoryManager
 
@@ -10,7 +10,7 @@ from ..ImageManager import ImageManager
 import weakref
 
 class BookManager:
-    def __init__(self, app: Flask, db : Database, book_category_manager_instance = None):
+    def __init__(self, app: Quart, db : Database, book_category_manager_instance = None):
         self._book_category_manager: BookCategoryManager = weakref.ref(book_category_manager_instance) if book_category_manager_instance else None
         self.book_queries = BookQueries(db.Session)
         self.register_routes(app)
@@ -42,7 +42,7 @@ class BookManager:
             } for category in book["book_categories"]]
         return []
 
-    def register_routes(self, app: Flask):
+    def register_routes(self, app: Quart):
         
         @app.route("/books/insert", methods=["POST"])
         def insert_multiple_books():
@@ -81,6 +81,7 @@ class BookManager:
         @app.route("/books/get_paged", methods=["POST"])
         def get_paged_books():
             data = request.get_json()
+            print(data)
             result = self.book_queries.get_paged_books(
                 data.get("page", 0),
                 data.get("per_page", 15),
@@ -133,7 +134,6 @@ class BookManager:
             categories_to_add = []
             categories_to_remove = []
 
-            print(data)
             for book in data:
                 image = self.process_book_image(book)
                 if image:

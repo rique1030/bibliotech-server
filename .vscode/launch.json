@@ -1,10 +1,11 @@
 {
 	"configurations": [
 		{
-			"name": "Python Debugger: Current File",
+			"consoleName": "Server",
+			"name": "Python Debugger: Main",
 			"type": "debugpy",
 			"request": "launch",
-			"program": "${file}",
+			"program": "${workspaceFolder}/main.py",
 			"console": "integratedTerminal",
 			"gevent": true
 		}

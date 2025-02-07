@@ -55,6 +55,13 @@ class User(Base):
     role = relationship("Role", back_populates="users")
     borrowed_books = relationship("BorrowedBook", back_populates="user")
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "email": self.email,
+            # Exclude password for security reasons
+        }
+
 class Book(Base):
     __tablename__ = 'books'
     id = Column(Integer, primary_key=True, autoincrement=True)
