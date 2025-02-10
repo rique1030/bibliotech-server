@@ -91,7 +91,7 @@ class CategoryQueries:
         """
         try:
             self.session.bulk_update_mappings(Category, categories)
-            # TODO: add commit
+            
             self.session.commit()
             # Return the number of categories updated
             return {"success": True, "message": f"{len(categories)} Category{'' if len(categories) == 1 else 's'} edited successfully"}

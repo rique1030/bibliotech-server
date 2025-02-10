@@ -156,7 +156,7 @@ class BookQueries:
         """
         try:
             self.session.bulk_update_mappings(Book, books)
-            # TODO: add commit
+
             self.session.commit()
             if not self.qr.generate_qr_code(books):
                 raise Exception("Failed to generate QR codes for the books")

@@ -1,6 +1,7 @@
+from sqlalchemy import alias, func
 from sqlalchemy.orm import Session
 from .query_helper import QueryHelper
-from ..tables.models import BookCategory
+from ..tables.models import BookCategory, Category
 
 class BookCategoryQueries:
     def __init__(self, session: Session):
@@ -17,7 +18,7 @@ class BookCategoryQueries:
         """
         try:
             self.session.bulk_insert_mappings(BookCategory, book_categories)
-            # TODO: add commit
+             
             self.session.commit()
             # Return the number of book categories inserted
             return { "success": True, "message": "Book categories inserted successfully" }
@@ -41,6 +42,62 @@ class BookCategoryQueries:
             self.session.rollback()
             raise e
 
+
+    def get_paged_category_count(
+        self,
+        page: int = 0,
+        per_page: int = 15,
+        filters: dict = None,
+        order_by: str = "id",
+        order_direction: str = "asc"
+    ) -> list:
+        """
+        Returns a list of categories in the database, sorted and filtered according
+        to the input parameters.
+        """
+        try:
+            categoryAlias = alias(Category)  # This creates an alias for the Category table
+
+            query = self.session.query(
+                categoryAlias.c.name,  # Category name
+                categoryAlias.c.description,  # Category description
+                func.count(BookCategory.book_access_number).label("book_count"),
+                # func.group_concat(BookCategory.book_access_number).label("book_access_numbers")
+            ).join(BookCategory, categoryAlias.c.id == BookCategory.category_id).group_by(categoryAlias.c.name, categoryAlias.c.description)
+
+            if filters:
+                for column, value in filters.items():
+                    try:
+                        # Safely apply filters dynamically
+                        if column in ['name', 'description']:  # Special case for Category table
+                            column_attr = getattr(categoryAlias.c, column, None)  # Look up in Category alias
+                        else:
+                            column_attr = getattr(BookCategory, column, None)  # Look up in BookCategory table
+                        if column_attr is None:
+                            raise Exception(f"Column '{column}' not found")
+                        query = query.filter(column_attr.like(f"%{value}%"))
+                    except Exception as e:
+                        raise Exception(f"Invalid filter: {e}")
+                    
+            total_count = query.count()
+            offset = page * per_page
+            query = query.offset(offset).limit(per_page)
+            result = query.all()
+
+            data = []
+            for row in result:
+                data.append({
+                    "name": row.name,
+                    "description": row.description,
+                    "book_count": row.book_count,
+                    # "book_access_numbers": row.book_access_numbers
+                })
+            return {"success": True, "data": data, "total_count": total_count}
+            
+        except Exception as e:
+            self.session.rollback()
+            raise e
+
     """
     Update
     --------------------------------------------------
@@ -52,7 +109,7 @@ class BookCategoryQueries:
         """
         try:
             self.session.bulk_update_mappings(BookCategory, book_categories)
-            # TODO: add commit
+             
             # self.session.commit()
             # Return the number of book categories updated
             return len(book_categories)

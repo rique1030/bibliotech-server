@@ -55,6 +55,7 @@ class User(Base):
     role = relationship("Role", back_populates="users")
     borrowed_books = relationship("BorrowedBook", back_populates="user")
 
+# ! TODO: DELETE THIS
 class Book(Base):
     __tablename__ = 'books'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -73,6 +74,28 @@ class Book(Base):
     borrowed_books = relationship("BorrowedBook", back_populates="book")
     categories = relationship("BookCategory", back_populates="book")
     popularity = relationship("BookPopularity", back_populates="book")
+class BookCatalog(Base):
+    __tablename__ = 'book_catalog'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    access_number = Column(String(255), nullable=False, unique=True)
+    call_number = Column(String(255), nullable=False )
+    title = Column(String(255), nullable=False)
+    author = Column(String(255), nullable=False, default="Unknown")
+    publisher = Column(String(255), nullable=False, default="Unknown")
+    cover_image = Column(String(255), nullable=True)
+    description = Column(String(255), nullable=True)
+
+    # borrowed_books = relationship("BorrowedBook", back_populates="book")
+    # categories = relationship("BookCategory", back_populates="book")
+    # popularity = relationship("BookPopularity", back_populates="book")
+
+class BookCopies(Base):
+    __tablename__ = 'book_copies'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    book_catalog_id = Column(Integer, ForeignKey('book_catalog.id'), nullable=False)
+    access_number = Column(String(255), nullable=False, unique=True)
+    shelf_location = Column(String(255), nullable=True)
+    status = Column(Enum('available', 'borrowed', 'lost', name='book_status'), nullable=False, default='available')
 
 class BookCategory(Base):
     __tablename__ = 'book_categories'

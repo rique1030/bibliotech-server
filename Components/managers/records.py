@@ -48,4 +48,16 @@ class RecordManager:
             )
             return { "success": True, "data": result }
 
-    
+        @app.route("/records/get_categories", methods=["POST"])    
+        def get_book_categories():
+            data = request.get_json()
+            if data is None:
+                return { "success": False, "data": None }
+            result = self.book_category.get_paged_category_count(
+                data.get("page", 0),
+                data.get("per_page", 15),
+                data.get("filters", None),
+                data.get("order_by", "id"),
+                data.get("order_direction", "asc")
+            )
+            return { "success": True, "data": result }
