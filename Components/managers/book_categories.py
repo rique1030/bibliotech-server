@@ -8,28 +8,28 @@ class BookCategoryManager:
 
     def register_routes(self, app: Quart):
         
-        @app.route("/book_categories/insert", methods=["POST"])
-        def insert_multiple_book_categories():
-            book_categories = request.get_json()
-            result = self.book_category_queries.insert_multiple_book_categories(book_categories)
-            return { "success": True, "data": result }
+        @app.route("/book_category/insert", methods=["POST"])
+        async def insert_book_categories():
+            book_categories = await request.get_json()
+            result = await self.book_category_queries.insert_book_categories(book_categories)
+            return result
         
-        @app.route("/book_categories/get_by_id", methods=["POST"])
-        def get_book_categories_by_id():
-            data = request.get_json()
-            result = self.book_category_queries.get_book_categories_by_id(data)
-            return { "success": True, "data": result }
+        @app.route("/book_category/get", methods=["POST"])
+        async def fetch_via_book_id():
+            data = await request.get_json()
+            result = await self.book_category_queries.fetch_via_book_id(data)
+            return result
         
-        @app.route("/book_categories/update", methods=["POST"])
-        def update_book_categories():
-            data = request.get_json()
-            result = self.book_category_queries.update_book_categories(data)
-            return { "success": True, "data": result }
+        @app.route("/book_category/paged", methods=["POST"])
+        async def paged_book_categories():
+            data = await request.get_json()
+            result = await self.book_category_queries.paged_book_categories(data)
+            return result
         
-        @app.route("/book_categories/delete", methods=["POST"])
-        def delete_book_categories_by_id():
-            data = request.get_json()
-            result = self.book_category_queries.delete_book_categories_by_id(data)
-            return { "success": True, "data": result }
+        @app.route("/book_category/delete", methods=["POST"])
+        async def delete_book_categories():
+            data = await request.get_json()
+            result = await self.book_category_queries.delete_book_categories(data)
+            return result
         
 

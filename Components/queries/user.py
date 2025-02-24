@@ -1,188 +1,141 @@
-from sqlalchemy.future import select
-from sqlalchemy.sql import func
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
-from .query_helper import QueryHelper
-from ..tables.models import User
+import uuid
+from sqlalchemy import func, select, update
+from sqlalchemy.orm import aliased
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
+from Components.queries.base_query import BaseQuery
+from ..tables.models import Role, User
 
-class UserQueries:
-    def __init__(self, session: Session):
-        self.session_factory = session
-        self.query_helper = QueryHelper(session)
-        # self.populate_user()
-        
-    """
-    Insert
-    --------------------------------------------------
-    """
+users = [
+    {   
+        "id": "4DM1N",
+        "profile_pic": "default",
+        "first_name": "admin",
+        "last_name": "admin",
+        "email": "admin@admin.com",
+        "password": "admin", 
+        "school_id": "4DM1N",
+        "role_id": "ADMIN",
+        "is_verified": True,
+        "created_at": None,
+    }
+]
 
-    async def insert_multiple_users(self, users: list):
-        """
-        Inserts multiple users into the database.
-        """
-        async with self.session_factory() as session:
-            try:
-                result = await session.execute(User.__table__.insert(), users)
-                await session.commit()
+class UserQueries(BaseQuery):
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]):
+        super().__init__(session_factory)
+    # ? Insert
+
+    async def insert_users(self, users: list):
+        async def operation(session):
+
+            for user in users:
+                # removing unnecessary fields
+                user.pop("id", None)
+                user.pop("color", None)
+                user.pop("role_name", None)
+                user["id"] = str(uuid.uuid4())
+
+                # saving profile pic
+                profile_pic_buffer = user.pop("profile_pic_buffer", None)
+                if profile_pic_buffer:
+                    profile_pic = await self.image_helper.convert_to_image(profile_pic_buffer)
+                    profile_pic_name = await self.image_helper.save_image(profile_pic, user["id"], self.user_photos_path)
+                    user["profile_pic"] = profile_pic_name
+                else:
+                    user["profile_pic"] = "default"
+
+
+                b = User(**user)
+                session.add(b)
+            return {"message": self.generate_user_message(len(users), "added"), "data": None}  
+        return await self.execute_query(operation)
+    
+    # ? select
+    async def paged_users(self, payload: dict):
+        async def operation(session):
+            # query = select(User)
+            user = aliased(User)
+            role = aliased(Role)
+            query = select(
+                user.id,
+                user.profile_pic,
+                (user.first_name + " " + user.last_name).label("full_name"),
+                user.email,
+                user.password,
+                user.school_id,
+                role.role_name,
+                role.color,
+                user.is_verified,
+                user.created_at
+            ).join(role, user.role_id == role.id)
+            result = await self.query_helper.get_paged_data(session, [user, role], payload, query)
+            return {"data": {"items": result["data"], "total_count": result["total_count"]}, "message": "Users fetched successfully"}
+        return await self.execute_query(operation)
+
+    async def fetch_via_id(self, ids: list):
+        async def operation(session):
+            result = await session.execute(select(User).where(User.id.in_(ids)))
+            data = result.scalars().all()
+            data = await self.query_helper.model_to_dict(data)
+            
+            return {"data": data , "message": "User fetched successfully"}
+        return await self.execute_query(operation)
+    
+    async def fetch_via_email_and_password(self, email: str, password: str):
+        async def operation(session):
+            result = await session.execute(select(User).where(User.email == email, User.password == password))
+            data = result.scalars().all()
+            data = await self.query_helper.model_to_dict(data)
+            return {"data": data , "message": "User fetched successfully"}
+        return await self.execute_query(operation)
+    
+    # ? Update
+
+    async def update_users(self, users: dict):
+        async def operation(session):
+            for user in users:
+                # remove unecessary fields
+                user.pop("color", None)
+                user.pop("role_name", None)
+                user.pop("profile_pic_blob", None)
+                user.pop("created_at", None)
+                                
+                profile_pic_buffer = user.pop("profile_pic_buffer", None)
+                if profile_pic_buffer:
+                    profile_pic = await self.image_helper.convert_to_image(profile_pic_buffer)
+                    profile_pic_name = await self.image_helper.save_image(profile_pic, user["id"], self.user_photos_path )
+                    user["profile_pic"] = profile_pic_name
                 
-                return {"success": True, "message": f"{result.rowcount} User{'' if result.rowcount == 1 else 's'} added successfully"}
-            except IntegrityError as e:
-                await session.rollback()
-                return {"success": False, "error": "One of the submitted users already exists with the same email."}
-            except Exception as e:
-                await session.rollback()
-                return {"success": False, "error": f"An unexpected error occurred"}
-    
-    """
-    Select
-    --------------------------------------------------
-    """
-
-    async def get_paged_users(
-        self,
-        page: int = 0,
-        per_page: int = 15,
-        filters: dict = None,
-        order_by: str = "id",
-        order_direction: str = "asc"
-    ) -> list:
-        """
-        Returns a list of users in the database, sorted and filtered according
-        to the input parameters.
-        """
-        async with self.session_factory() as session:
-            try:
-                result = await session.execute(
-                    select(User).order_by(
-                        getattr(User, order_by).asc() if order_direction == "asc" else getattr(User, order_by).desc()
-                    ).limit(per_page).offset(page * per_page)
+                stmt = (
+                    update(User)
+                    .where(User.id == user["id"])
+                    .values(**{key: value for key, value in user.items() if key != "id"})
                 )
-                return [dict(row) for row in result]
-            except Exception as e:
-                await session.rollback()
-                raise e
+                await session.execute(stmt)
+            return {"message": self.generate_user_message(len(users), "updated"), "data": None}
+        return await self.execute_query(operation)
 
-    async def get_paged_user_records(
-            self,
-            page: int = 0,
-            per_page: int = 15,
-            filters: dict = None,
-            order_by: str = "id",
-            order_direction: str = "asc"
-    ) -> list:
-        """
-        Returns a list of users in the database, sorted and filtered according
-        to the input parameters.
-        """
-        try:
-            # return await self.query_helper.get_paged_data(User, page, per_page, filters, order_by, order_direction)
-            query = (
-                await self.session.execute(
-                    select(User).order_by(
-                        getattr(User, order_by).asc() if order_direction == "asc" else getattr(User, order_by).desc()
-                    ).limit(per_page).offset(page * per_page)
-                )
-            )
-            pass
+    # ? Delete
 
-        except Exception as e:
-            await self.session.rollback()
-            raise e
+    async def delete_users(self, user_ids: list):
+        async def operation(session):
+            result = await session.execute(User.__table__.delete().where(User.id.in_(user_ids)))
+            await session.commit()
+            return {"message": self.generate_user_message(result.rowcount, "deleted"), "data": None}
+        return await self.execute_query(operation)
 
+    async def populate_users(self):
+        async def operation(session):
+            print("Populating users...")
+            user_count = await session.execute(select(func.count(User.id)))
+            count = user_count.scalar()
+            if count == 0:
+                await self.insert_users(users)
+                return {"data": None, "message": "Users populated successfully"}
+            return {"data": None, "message": "Users already populated"}
+        return await self.execute_query(operation)
+
+
+    def generate_user_message(self, user_count, query_type):
+        return f"{user_count} User{'' if user_count == 1 else 's'} {query_type} successfully"
     
-
-    async def get_users_by_id(self, user_ids: list) -> list:
-        """
-        Returns a list of users with the given IDs from the database.
-        """
-        async with self.session_factory() as session:
-            try:
-                result = await session.execute(select(User).where(User.id.in_(user_ids)))
-                return [dict(row) for row in result]
-            except Exception as e:
-                await session.rollback()
-                raise e
-    
-    async def get_user_by_email_and_password(self, email: str, password: str) -> User:
-        """
-        Returns the user with the given email and password in the database.
-        """
-        async with self.session_factory() as session:
-            try:
-                result = await session.execute(select(User).where(User.email == email, User.password == password))
-                row = result.first()
-                if row is None:
-                    return None
-                return row.User.to_dict()
-            except Exception as e:
-                await session.rollback()
-                raise e
-    
-    """
-    Update
-    --------------------------------------------------
-    """
-
-    async def update_users(self, user: list):
-        """
-        Updates the users in the database.
-        """
-        async with self.session_factory() as session:
-            try:
-                result = await session.execute(User.__table__.update().values(user).where(User.id == user["id"]))
-                await session.commit()
-
-                # Return the number of users updated
-                return {"success": True, "message": f"{result.rowcount} User{'' if result.rowcount == 1 else 's'} edited successfully"}
-            except IntegrityError as e:
-                await session.rollback()
-                return {"success": False, "error": "One of the submitted users already exists with the same email."}
-            except Exception as e:
-                await session.rollback()
-                print(e)
-                return {"success": False, "error": f"An unexpected error occurred"}
-    
-    """
-    Delete
-    --------------------------------------------------
-    """
-
-    async def delete_users_by_id(self, user_ids: list):
-        """
-        Deletes the users with the given IDs from the database.
-        """
-        async with self.session_factory() as session:
-            try:
-                result = await session.execute(User.__table__.delete().where(User.id.in_(user_ids)))
-                await session.commit()
-
-                # Return the number of users deleted
-                return {"success": True, "message": f"{result.rowcount} User{'' if result.rowcount == 1 else 's'} deleted successfully"}
-            except Exception as e:
-                await session.rollback()
-                return {"success": False, "error": f"An unexpected error occurred"}
-
-    async def populate_user(self):
-        async with self.session_factory() as session:
-            try: 
-                user_count = await session.execute(select(func.count(User.id )))
-                count = user_count.scalar()
-                if count == 0:
-                    users = [
-                        {   
-                            "id": 0,
-                            "profile_pic": "default",
-                            "first_name": "admin",
-                            "last_name": "admin",
-                            "email": "admin@admin.com",
-                            "password": "admin", 
-                            "school_id": "4DM1N",
-                            "role_id": 1,
-                            "is_verified": True,
-                            "created_at": None,
-                        }]
-                    await self.insert_multiple_users(users)
-            except Exception as e:
-                await session.rollback()
-                raise Exception(f"Error populating users: {e}")
-

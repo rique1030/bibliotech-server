@@ -7,45 +7,40 @@ class RoleManager:
         self.register_routes(app)
 
     def register_routes(self, app: Quart):
-        @app.route("/roles/insert", methods=["POST"])
+        @app.route("/role/insert", methods=["POST"])
         async def insert_multiple_roles():
             roles = await request.get_json()
-            result = await self.role_queries.insert_multiple_roles(roles)
+            result = await self.role_queries.insert_roles(roles)
             return result
         
-        @app.route("/roles/get_all", methods=["GET"])
-        async def get_all_roles():
-            result = await self.role_queries.get_all_roles()
-            return { "success": True, "data": result }
+        @app.route("/role/get", methods=["GET"])
+        async def get_roles():
+            result = await self.role_queries.get_roles()
+            return result
 
-        @app.route("/roles/get_paged", methods=["POST"])
-        async def get_paged_roles():
+        @app.route("/role/paged", methods=["POST"])
+        async def paged_roles():
             data = await request.get_json()
-            result = await self.role_queries.get_paged_roles(
-                data.get("page", 0),
-                data.get("per_page", 15),
-                data.get("filters", None),
-                data.get("order_by", "id"),
-                data.get("order_direction", "asc")
-            )
-            return { "success": True, "data": result }
+            result = await self.role_queries.paged_roles(data)
+            return result
         
-        @app.route("/roles/get_by_id", methods=["POST"])
-        async def get_roles_by_id():
+        @app.route('/role/fetch:id', methods=["POST"])
+        async def fetch_role_by_id():
             data = await request.get_json()
-            result = await self.role_queries.get_roles_by_id(data)
-            return { "success": True, "data": result }
+            result = await self.role_queries.fetch_via_id(data)
+            return result
         
-        @app.route("/roles/update", methods=["POST"])
+        @app.route("/role/update", methods=["POST"])
         async def update_role():
             data = await request.get_json()
             result = await self.role_queries.update_roles(data)
             return result
         
-        @app.route("/roles/delete", methods=["POST"])
-        async def delete_roles_by_id():
+        @app.route("/role/delete", methods=["POST"])
+        async def delete_roles():
             data = await request.get_json()
-            roles_to_delete = data.get("id", [])
-            result = await self.role_queries.delete_roles_by_id(roles_to_delete)
+            result = await self.role_queries.delete_roles(data)
             return result
         
+
+

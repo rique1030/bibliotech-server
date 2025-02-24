@@ -19,17 +19,34 @@ class QRManager:
                 self.qr.clear()
                 self.qr.add_data(book["qrcode"])
                 self.qr.make(fit=True)
-                img = self.qr.make_image(fill_color="black", back_color="white").convert('RGB')
-                logo = Image.open(os.path.join(self.QR_CODE_PATH, "logo.png"))
-                qr_width, qr_height = img.size
-                logo_size = min(qr_width, qr_height) // 4
-                logo = logo.resize((logo_size, logo_size))
-                logo_position = ((qr_width - logo.width) // 2, (qr_height - logo.height) // 2)
-                img.paste(logo, logo_position, mask=logo.convert("RGBA").split()[3])
+                
                 img.save(os.path.join(self.QR_CODE_PATH, f"{book['qrcode']}.png"))
         except Exception as e:
             return False
         return True
+    
+    def generate_image(self, data):
+        try:
+            for book in data:
+                self.qr.clear()
+                self.qr.add_data(book["access_number"])
+                self.qr.make(fit=True)
+                img = self.qr.make_image(fill_color="black", back_color="white").convert('RGB')
+                img = self.add_logo(img)
+                img.save(os.path.join(self.QR_CODE_PATH, f"{book['access_number']}.png"))
+        except Exception as e:
+            print(e)
+            return False
+        return True
+    
+    def add_logo(self, img):
+        logo = Image.open(os.path.join(self.QR_CODE_PATH, "logo.png"))
+        qr_width, qr_height = img.size
+        logo_size = min(qr_width, qr_height) // 4
+        logo = logo.resize((logo_size, logo_size))
+        logo_position = ((qr_width - logo.width) // 2, (qr_height - logo.height) // 2)
+        img.paste(logo, logo_position, mask=logo.convert("RGBA").split()[3])
+        return img
 
     def add_code(self, data):
         for book in data:
