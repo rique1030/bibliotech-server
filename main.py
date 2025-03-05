@@ -5,7 +5,7 @@ from quart import Quart, send_from_directory, request
 # import quart
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
-import socketio
+from socketio import AsyncServer, ASGIApp
 import asyncio
 from quart_cors import cors
 from tabulate import tabulate
@@ -34,8 +34,8 @@ app = Quart(__name__, static_folder="./storage")
 cors(app)
 
 # ? Use ASGI-compatible server
-sio = socketio.AsyncServer( async_mode='asgi', cors_allowed_origins="*")
-app.asgi_app = socketio.ASGIApp(sio, app.asgi_app) 
+sio = AsyncServer(async_mode='asgi', cors_allowed_origins="*")
+app.asgi_app = ASGIApp(sio, app.asgi_app) 
 
 class MainServer:
 	def __init__(self):
@@ -44,7 +44,7 @@ class MainServer:
 		self.app = app
 		self.socketio = sio
 		self.db = Database(app, self)
-	
+
 		# ? category
 		self.category_manager = CategoryManager(self.app, self.db)
 		self.book_category_manager = BookCategoryManager(self.app, self.db)
@@ -65,7 +65,7 @@ class MainServer:
 		self.socketio.on('mount_connection', self.mount_connection)
 		# self.socketio.on("*", self.catch_all)
 		self.app.add_url_rule('/clients', view_func=self.get_available_clients, methods=["GET"])
-	
+
 	# @sio.on("*")
 	# async def catch_all(event, sid, data=None):
 	# 	logging.info(f"Event: {event}")
@@ -75,7 +75,7 @@ class MainServer:
 	async def populate_tables(self):
 		await self.role_manager.role_queries.populate_roles()
 		await self.user_manager.user_queries.populate_users()
-		
+
 	@app.before_serving
 	async def before_serving():
 		logging.info("Starting the server...")
@@ -123,7 +123,7 @@ class MainServer:
 		other_connections = self.book_borrow_manager.unauthenticated_connections
 		table_data = list(zip_longest(clients, other_connections, fillvalue=""))
 		print(tabulate(table_data, headers=["Available Clients", "Other Connections"], tablefmt="psql"))
-	
+
 	async def unmount_connection(self, sid):
 		client_id = self.book_borrow_manager.available_clients.pop(sid, None)
 		self.book_borrow_manager.unauthenticated_connections.discard(sid)
@@ -194,4 +194,3 @@ if __name__ == "__main__":
 	except KeyboardInterrupt:
 		print("\nServer shutdown requested.")
 	# asyncio.run(main())
-
