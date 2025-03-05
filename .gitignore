@@ -2,6 +2,10 @@
 storage/qr-codes/**
 storage/images/book_covers/**
 storage/images/user_photos/**
+__pycache__/
+*.pyc
+TODO.md
+*.code-workspace
 
 # allow
 storage/images/user_photos/default.png
