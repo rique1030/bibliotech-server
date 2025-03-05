@@ -30,10 +30,11 @@ class UserQueries(BaseQuery):
 
             for user in users:
                 # removing unnecessary fields
-                user.pop("id", None)
+                if not user.get("id") == "4DM1N":
+                    user.pop("id", None)
+                    user["id"] = str(uuid.uuid4())
                 user.pop("color", None)
                 user.pop("role_name", None)
-                user["id"] = str(uuid.uuid4())
 
                 # saving profile pic
                 profile_pic_buffer = user.pop("profile_pic_buffer", None)
@@ -59,7 +60,9 @@ class UserQueries(BaseQuery):
             query = select(
                 user.id,
                 user.profile_pic,
-                (user.first_name + " " + user.last_name).label("full_name"),
+                # (user.first_name + " " + user.last_name).label("full_name"),
+                user.first_name,
+                user.last_name,
                 user.email,
                 user.password,
                 user.school_id,

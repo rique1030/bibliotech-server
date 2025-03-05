@@ -1,3 +1,4 @@
+import uuid
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
@@ -9,18 +10,20 @@ class CopyQueries(BaseQuery):
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]):
         super().__init__(session_factory)
         self.qr = QRManager()
-
-    # ? ====================[ INSERT ]=====================================================================================
-
+    # ? insert
     async def insert_copies(self, books: list):
         async def operation(session):
             for book in books:
+                newId = str(uuid.uuid4())
+                book["id"] = newId
                 b = Copy(**book)
+                QR = self.qr.generate_image(book["access_number"])
+                await self.image_helper.save_image(QR, book["access_number"], self.qr_code_path)
                 session.add(b)
             return {"message": self.generate_book_message(len(books), "added"), "data": None}
         return await self.execute_query(operation)
 
-    # ? ====================[ UPDATE ]=====================================================================================
+    # ? update
 
     async def update_copies(self, books: list):
         async def operation(session):
@@ -34,8 +37,7 @@ class CopyQueries(BaseQuery):
             return {"message": self.generate_book_message(len(books), "updated"), "data": None}
         return await self.execute_query(operation)
 
-
-    # ? ====================[ SELECT ]=====================================================================================    
+    # ? get
 
     async def paged_copies(self, data: dict):
         async def operation(session):
@@ -53,7 +55,7 @@ class CopyQueries(BaseQuery):
                     catalog.cover_image,
                     catalog.description,
                     ).join(catalog, instance.catalog_id == catalog.id)
-            result = await self.query_helper.get_paged_data(session, instance, data, query)
+            result = await self.query_helper.get_paged_data(session, [instance, catalog], data, query)
             return {"data": {"items": result["data"], "total_count": result["total_count"]}, "message": "Books fetched successfully"}
         return await self.execute_query(operation)
     
@@ -100,7 +102,6 @@ class CopyQueries(BaseQuery):
                 "message": self.generate_book_message(len(result), "fetched"),
             }
         return await self.execute_query(operation)
-    
 
     async def fetch_via_access_number(self, access_numbers: list):
         async def operation(session):
@@ -129,6 +130,32 @@ class CopyQueries(BaseQuery):
         return await self.execute_query(operation)
     
 
+    async def fetch_via_catalog_id(self, catalog_ids: list):
+        async def operation(session):
+            instance = aliased(Copy)
+            catalog = aliased(Catalog)
+            result = await session.execute(
+                select(
+                    instance.id,
+                    instance.access_number,
+                    instance.status,
+                    instance.catalog_id,
+                    catalog.call_number,
+                    catalog.title,
+                    catalog.author,
+                    catalog.publisher,
+                    catalog.cover_image,
+                    catalog.description,
+                    ).join(catalog, instance.catalog_id == catalog.id)
+                .where(instance.catalog_id.in_(catalog_ids))
+            )
+            result = [dict(row) for row in result.mappings()]
+            return {
+                "data": result,
+                "message": self.generate_book_message(len(result), "fetched"),
+            }
+        return await self.execute_query(operation)
+    
     # ? delete
 
     async def delete_copies(self, book_ids: list):
@@ -136,9 +163,10 @@ class CopyQueries(BaseQuery):
             result = await session.execute(
                 Copy.__table__.delete().where(Copy.id.in_(book_ids))
             )
+            for id in book_ids:
+                await self.image_helper.delete_image(id, self.qr_code_path)
             return {"message": self.generate_book_message(result.rowcount, "deleted"), "data": None}
         return await self.execute_query(operation)
-
 
     def generate_book_message(self, book_count, query_type):
         return f"{book_count} Book Cop{'y' if book_count == 1 else 'ies'} {query_type} successfully"

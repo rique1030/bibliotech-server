@@ -22,7 +22,7 @@ class CatalogManager:
             return result
         
         @app.route("/catalog/fetch:id", methods=["POST"])
-        async def fetch_via_ids():
+        async def fetch_catalog_via_id():
             data = await request.get_json()
             print(data)
             result = await self.catalog.fetch_via_ids(data)

@@ -24,7 +24,7 @@ class UserManager:
             return result
 
         @app.route("/user/fetch:id", methods=["POST"])
-        async def fetch_via_id():
+        async def fetch_user_via_id():
             data = await request.get_json()
             result = await self.user_queries.fetch_via_id(data)
             return result

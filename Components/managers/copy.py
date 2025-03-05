@@ -44,3 +44,15 @@ class CopyManager:
             access_numbers = await request.get_json()
             result = await self.copy.fetch_via_access_number(access_numbers)
             return result
+        
+        @app.route('/copy/fetch:catalog_id', methods=['POST'])
+        async def fetch_via_catalog_id():
+            catalog_ids = await request.get_json()
+            result = await self.copy.fetch_via_catalog_id(catalog_ids)
+            return result
+        
+        @app.route('/copy/fetch:id', methods=['POST'])
+        async def fetch_copy_via_id():
+            ids = await request.get_json()
+            result = await self.copy.fetch_via_id(ids)
+            return result

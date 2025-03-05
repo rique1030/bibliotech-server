@@ -17,6 +17,7 @@ class BookBorrowManager:
         self.user_query = None
         self.book_borrow = BorrowedBookQueries(db.Session)
         self.available_clients = {}
+        self.unauthenticated_connections = set()
         self.requests = {}
 
         self.socket.on('request', self.handle_request)
@@ -70,7 +71,7 @@ class BookBorrowManager:
                 "request_id": sid,
                 "accepted": False,
                 "receiver_id": data.get("receiver_id"),
-                "type": data.get("type"),
+                "borrow": data.get("borrow", True),
                 "book": {key: book[key] for key in ['id', 'title', 'author', 'publisher', 'access_number', 'call_number', 'cover_image']},
                 "user": {key: user[key] for key in ['id', 'profile_pic', 'first_name', 'last_name', 'email', 'school_id', 'role_id', 'is_verified']}
             }
@@ -148,11 +149,12 @@ class BookBorrowManager:
         available, request_id = await self.verify_request(data)
         if not available:
             await self.emit_response('request_denied', "Request not found", room=sid)
+            await self.emit_response('client_message', "Request has expired. You only have 30 seconds to respond to a request", room=sid)
             return
         if not request_id in self.requests:
             await self.emit_response('request_denied', "Request not found", room=sid)
+            await self.emit_response('client_message', "Request has expired. You only have 30 seconds to respond to a request", room=sid)
             return
-        
         requests = self.requests.pop(request_id, None)
         
         if not requests.get("accepted", False):
@@ -163,6 +165,7 @@ class BookBorrowManager:
         await asyncio.sleep(1)
         if not data["approved"]:
             await self.emit_response('request_denied', "Request denied", room=data["request_id"])
+            await self.emit_response('client_message', "Request has been denied", room=request.get("receiver_id"))
             logging.info("Request denied")
         else:
             borrow = data.get("borrow", True)
@@ -175,9 +178,10 @@ class BookBorrowManager:
                 result = await self.book_borrow.delete_borrow(request.get("book"), request.get("user"))
             if result.get("success", False) is False:
                 await self.emit_response('request_denied', "Request denied", room=data["request_id"])
-                # self.requests.pop(request_id, None)            
+                await self.emit_response('client_message', "Request has been denied by the server", room=request.get("receiver_id"))
                 return
             await self.emit_response('request_approved', "Request approved", room=data["request_id"])
+            await self.emit_response('client_message', "Request has been approved", room=request.get("receiver_id"))
         # self.requests.pop(request_id, None)            
         
 

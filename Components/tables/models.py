@@ -80,7 +80,7 @@ class Copy(Base):
     status = Column(Enum('available', 'borrowed', 'lost', name='book_status'), nullable=False, default='available')
 
     catalog = relationship("Catalog", back_populates="copies")
-    borrowed_books = relationship("BorrowedBook", back_populates="copies")
+    borrowed_books = relationship("BorrowedBook", back_populates="copies", cascade="all, delete-orphan")
 
 class BookCategory(Base):
     __tablename__ = 'book_categories'

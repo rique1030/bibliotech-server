@@ -62,7 +62,8 @@ class RoleQueries(BaseQuery):
     async def insert_roles(self, roles: list):
         async def operation(session):
             for role in roles:
-                role["id"] = str(uuid.uuid4())
+                if not role.get("id") == "ADMIN" and not role.get("id") == "U5ER":
+                    role["id"] = str(uuid.uuid4())
                 b = Role(**role)
                 session.add(b)
             return {"message": self.generate_role_message(len(roles), "added"), "data": None}

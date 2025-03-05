@@ -75,4 +75,4 @@ class BaseQuery:
 
     def generate_error_response(self, message):
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] LOG - Error: {message}")
-        return {"success": False, "data": None, "message": message}
+        return {"success": False, "data": None, "error": message, "message": message}

@@ -1,8 +1,6 @@
-# from quart import request
 from sqlalchemy import Row, RowMapping, and_, asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.inspection import inspect
-
 from Components.tables.models import User
 
 class QueryHelper:
@@ -13,12 +11,14 @@ class QueryHelper:
         page = data.get("page", 0)
         per_page = data.get("per_page", 15)
         filters = data.get("filters", None)
+        order_by = data.get("order_by", None)
+        order_direction = data.get("order_direction", "asc")
 
         query = await self.apply_filters(query, filters, model)
 
-        query = await self.apply_ordering(query, model)
+        query = await self.apply_ordering(query, model, order_by, order_direction)
 
-        total_count = await self.get_total_count(session, model)
+        total_count = await self.get_total_count(session, query)
 
         query = await self.apply_pagination(query, page, per_page)
         result = await session.execute(query)
@@ -54,18 +54,23 @@ class QueryHelper:
                     print(f"Column {column} not found in model {model}")
         return query
 
-    async def apply_ordering(self, query, model, order_column=None):
+
+
+    async def apply_ordering(self, query, model, order_column=None, order_direction="asc"):
         if not order_column:
             if isinstance(model, list):
                 order_column = getattr(model[0], "id")
             else:
                 order_column = getattr(model, "id")
+        if order_direction == "desc":
+            return query.order_by(desc(order_column))
         return query.order_by(asc(order_column))
 
-    async def get_total_count(self, session, model):
-        if isinstance(model, list):
-            model = model[0]
-        count_query = select(func.count()).select_from(model)
+
+    async def get_total_count(self, session, query):
+        # if isinstance(model, list):
+        #     model = model[0]
+        count_query = select(func.count()).select_from(query)
         result = await session.execute(count_query)
         return result.scalar()
     

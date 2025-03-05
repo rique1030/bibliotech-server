@@ -1,3 +1,4 @@
+from itertools import zip_longest
 import signal
 import sys
 from quart import Quart, send_from_directory, request
@@ -7,6 +8,7 @@ from hypercorn.config import Config
 import socketio
 import asyncio
 from quart_cors import cors
+from tabulate import tabulate
 from Components.config import *
 from Components.db import Database
 # ? Books
@@ -24,6 +26,8 @@ from Components.managers.records import RecordManager
 
 import os
 import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 # ? App
 app = Quart(__name__, static_folder="./storage")
@@ -59,9 +63,15 @@ class MainServer:
 		self.socketio.on('connect', self.handle_connect)
 		self.socketio.on('disconnect', self.handle_disconnect)
 		self.socketio.on('mount_connection', self.mount_connection)
-
+		# self.socketio.on("*", self.catch_all)
 		self.app.add_url_rule('/clients', view_func=self.get_available_clients, methods=["GET"])
-		
+	
+	# @sio.on("*")
+	# async def catch_all(event, sid, data=None):
+	# 	logging.info(f"Event: {event}")
+	# 	logging.info(f"Data: {data}")
+	# 	logging.info(f"SID: {sid}")
+
 	async def populate_tables(self):
 		await self.role_manager.role_queries.populate_roles()
 		await self.user_manager.user_queries.populate_users()
@@ -70,10 +80,10 @@ class MainServer:
 	async def before_serving():
 		logging.info("Starting the server...")
 
-	@app.before_request
-	async def before_request():
-		logging.info(f"\nIncoming request...")
-		logging.info(request.url)
+	# @app.before_request
+	# async def before_request():
+	# 	logging.info(f"\nIncoming request...")
+	# 	logging.info(request.url)
 
 	@app.route("/test_connection", methods=["GET"])
 	async def test():
@@ -90,20 +100,45 @@ class MainServer:
 	""" CONNECTION HANDLERS """
 
 	async def handle_connect(self, sid, environ):
+		self.book_borrow_manager.unauthenticated_connections.add(sid)
+		await self.show_connections()
+		return
 		logging.info(f"Incoming Unauthenticated Connection with ID: {sid}")
 
 	async def mount_connection(self, sid, data):
 		data = await self.book_borrow_manager.parse_request(data)
-		logging.info(f"Client Authenticated: {sid} (Name: {data.get('first_name')} {data.get('last_name')})")
+		self.book_borrow_manager.unauthenticated_connections.discard(sid)
+		# logging.info(f"Client Authenticated: {sid} (Name: {data.get('first_name')} {data.get('last_name')})")
 		data["busy"] = False
 		self.book_borrow_manager.available_clients[sid] = data
-		logging.info(f"\nAvailable clients:")
-		self.book_borrow_manager.print_json({
-			client_id: "online" for client_id in self.book_borrow_manager.available_clients
-		})
+		await self.show_connections()
+		# logging.info(f"\nAvailable clients:")
+		# self.book_borrow_manager.print_json({
+		# 	client_id: "online" for client_id in self.book_borrow_manager.available_clients
+		# })
+
+	async def show_connections(self):
+		os.system('cls' if os.name == 'nt' else 'clear')
+		clients = [client_id for client_id in self.book_borrow_manager.available_clients.keys()]
+		other_connections = self.book_borrow_manager.unauthenticated_connections
+		table_data = list(zip_longest(clients, other_connections, fillvalue=""))
+		print(tabulate(table_data, headers=["Available Clients", "Other Connections"], tablefmt="psql"))
+	
+	async def unmount_connection(self, sid):
+		client_id = self.book_borrow_manager.available_clients.pop(sid, None)
+		self.book_borrow_manager.unauthenticated_connections.discard(sid)
+		await self.show_connections()
+		return
+		if client_id is None:
+			logging.info(f"Unauthenticated Client disconnected: {sid}")
+			return
+		logging.info(f"Client disconnected: {sid} (Name: {client_id.get('first_name')} {client_id.get('last_name')})")
 
 	async def handle_disconnect(self, sid):
 		client_id = self.book_borrow_manager.available_clients.pop(sid, None)
+		self.book_borrow_manager.unauthenticated_connections.discard(sid)
+		await self.show_connections()
+		return
 		if client_id is None:
 			logging.info(f"Unauthenticated Client disconnected: {sid}")
 			return
