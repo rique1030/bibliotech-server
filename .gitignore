@@ -1,7 +1,8 @@
 # ignores
-storage/qr-codes/**
-storage/images/book_covers/**
-storage/images/user_photos/**
+storage/qr-codes/*
+!storage/qr-codes/logo.png
+storage/images/book_covers/*
+storage/images/user_photos/*
 __pycache__/
 *.pyc
 TODO.md
