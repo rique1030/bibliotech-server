@@ -8,7 +8,11 @@ class DeploymentMode(Enum):
     DEVELOPMENT = "development"
     PRODUCTION = "production"
 
-DEPLOYMENT_MODE = DeploymentMode.DEVELOPMENT
+# Borrowing
+REQUEST_TIMEOUT = 10 # Seconds before a request is timed out
+REVIEW_TIMEOUT = 30 # Additional seconds added to the request timeout
+
+DEPLOYMENT_MODE = DeploymentMode.PRODUCTION
 
 
 DEVELOPMENT_CONFIG = {
@@ -20,23 +24,9 @@ DEVELOPMENT_CONFIG = {
 }
 
 PRODUCTION_CONFIG = {
-    "DB_NAME": "bibliotech_planestill",
-    "DB_USER": "bibliotech_planestill",
-    "DB_PASSWORD": "2df559976a9a869cba3a04b57c6594747c004e6a",
-    "DB_HOST": "dq54g.h.filess.io",
+    "DB_NAME": "bibliotech_pickharder",
+    "DB_USER": "bibliotech_pickharder",
+    "DB_PASSWORD": "2ef75e60cbf825309897ac4d7e723a0e5dd16389",
+    "DB_HOST": "0wsez.h.filess.io",
     "DB_PORT": 3305,
 }
-
-
-
-
-#     "PRODUCTION": {
-#         "DB_NAME": "bibliotech_planestill",
-#         "DB_USER": "bibliotech_planestill",
-#         "DB_PASSWORD": "2df559976a9a869cba3a04b57c6594747c004e6a",
-#         "DB_HOST": "dq54g.h.filess.io",
-#         "DB_PORT": 3305,
-#     },
-# }
-
-HOURS_PER_BACKUP = 24

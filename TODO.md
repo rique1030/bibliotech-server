@@ -1,15 +1,23 @@
-##### Book Instance
+- Book Catalog Query
+- [x] add_multiple_books
+- [x] fetch_paged_books
+- [x] modify_books
+- [x] remove_books_by_id
 
-- id
-- call_number
-- title
-- author
-- publisher
-- cover_image
-- description
+- Book Catalog Manager
+- [x] add_multiple_books
+- [x] fetch_paged_books
+- [x] modify_books
+- [x] remove_books_by_id
 
-##### Book Copies
+- Book Copy Query
+- [x] fetch_books_by_access_number
+- [x] fetch_paged_books
+- [ ] count_books
+- [ ] fetch_books_by_id
 
-- id
-- access_number
-- status
+- Book Copy Manager
+- [x] fetch_books_by_access_number
+- [x] fetch_paged_books
+- [ ] count_books
+- [ ] fetch_books_by_id

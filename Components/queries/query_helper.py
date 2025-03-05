@@ -1,56 +1,89 @@
-# from flask import request
-from sqlalchemy import Row, asc, desc
-from sqlalchemy.orm import Session
+from sqlalchemy import Row, RowMapping, and_, asc, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.inspection import inspect
+from Components.tables.models import User
 
 class QueryHelper:
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         self.session = session
 
-    def get_paged_data(
-            self, model,
-            page: int = 0,
-            per_page:  int = 15,
-            filters: dict = None, 
-            order_by: str = "id", 
-            order_direction: str = "asc"
-            ):
-        
-        query = self.session.query(model)
-        
-        # Handle search
+    async def get_paged_data(self, session, model, data, query = None):
+        page = data.get("page", 0)
+        per_page = data.get("per_page", 15)
+        filters = data.get("filters", None)
+        order_by = data.get("order_by", None)
+        order_direction = data.get("order_direction", "asc")
+
+        query = await self.apply_filters(query, filters, model)
+
+        query = await self.apply_ordering(query, model, order_by, order_direction)
+
+        total_count = await self.get_total_count(session, query)
+
+        query = await self.apply_pagination(query, page, per_page)
+        result = await session.execute(query)
+        if len(result.keys()) == 1:
+            rows = result.scalars().all()  # Returns a list of single-column values
+        else:
+            rows = result.mappings().all()        
+        return {"data": await self.model_to_dict(rows), "total_count": total_count}
+
+    async def apply_filters(self, query, filters, model):
         if filters:
             for column, value in filters.items():
-                try:
-                    query = query.filter(getattr(model, column).like(f"%{value}%"))
-                except Exception as e:
-                    raise Exception(f"Invalid filter: {e}")
-        
+                found = False
+                if isinstance(model, list):
+                    for m in model:
+                        if hasattr(m, column):
+                            query = query.where(getattr(m, column).like(f"%{value}%"))
+                            found = True
+                            break
+                else:
+                    if hasattr(model, column):
+                        query = query.where(getattr(model, column).like(f"%{value}%"))
+                        found = True
 
-        total_count = query.count()
+                if not found:
+                    if column == "full_name":
+                        print("full_name")
+                        query = query.where(
+                            and_(User.first_name.like(f"%{value}%"), User.last_name.like(f"%{value}%"))
+                        )
+                        found = True
+                        return query
+                    print(f"Column {column} not found in model {model}")
+        return query
 
-        # Handle ordering
-        if order_by:
-            try:
-                order_column = getattr(model, order_by, model.id)
-                if order_direction.lower() == "asc":
-                    order_column = asc(order_column)
-                elif order_direction.lower() == "desc":
-                    order_column = desc(order_column)
-                query = query.order_by(order_column)
-            except Exception as e:
-                raise Exception(f"Invalid order: {order_column}")
-            
-        # Handle pagination
-        offset = page * per_page
-        query = query.offset(offset).limit(per_page)
-        result = query.all()
-        # return { "data": self.model_to_dict(result), "total_count": total_count }
-        return { "data": self.model_to_dict(result), "total_count": total_count }
-                
-    def model_to_dict(self, model):
-        if isinstance(model, list):
-            return [self.model_to_dict(m) for m in model]
-        elif isinstance(model, Row):
-            return {column: model[column] for column in model.keys()}  
-        return {c.key: getattr(model, c.key) for c in inspect(model).mapper.column_attrs}
+
+
+    async def apply_ordering(self, query, model, order_column=None, order_direction="asc"):
+        if not order_column:
+            if isinstance(model, list):
+                order_column = getattr(model[0], "id")
+            else:
+                order_column = getattr(model, "id")
+        if order_direction == "desc":
+            return query.order_by(desc(order_column))
+        return query.order_by(asc(order_column))
+
+
+    async def get_total_count(self, session, query):
+        # if isinstance(model, list):
+        #     model = model[0]
+        count_query = select(func.count()).select_from(query)
+        result = await session.execute(count_query)
+        return result.scalar()
+    
+    async def apply_pagination(self, query, page, per_page):
+        return query.offset(page * per_page).limit(per_page)
+
+    """Converts a SQLAlchemy model to a dictionary"""
+
+    async def model_to_dict(self, rows):
+        if isinstance(rows, list):
+            return [await self.model_to_dict(m) for m in rows]
+        elif isinstance(rows, Row):
+            return {column: rows[column] for column in rows.keys()}
+        elif isinstance(rows, RowMapping):
+            return  {key: value for key, value in rows.items()} 
+        return {c.key: getattr(rows, c.key) for c in inspect(rows).mapper.column_attrs}

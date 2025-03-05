@@ -1,124 +1,74 @@
-from sqlalchemy.orm import Session
-from .query_helper import QueryHelper
+import uuid
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
+from Components.queries.base_query import BaseQuery
 from ..tables.models import Category
-from sqlalchemy.exc import IntegrityError
 
-class CategoryQueries:
-    def __init__(self, session: Session):
-        self.session = session
-        self.query_helper = QueryHelper(session)
+class CategoryQueries(BaseQuery):
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]):
+        super().__init__(session_factory)
     
-    """
-    Insert
-    --------------------------------------------------
-    """
+    # ? Insert
+    async def insert_categories(self, categories: list):
+        async def operation(session):
+            for category in categories:
+                # removing unnecessary fields
+                category.pop("id", None)
+                category_id = str(uuid.uuid4())
+                category["id"] = category_id
+
+                b = Category(**category)
+                session.add(b)
+            return {"message": self.generate_category_message(len(categories), "added"), "data": None}
+        return await self.execute_query(operation)
     
-    def insert_multiple_categories(self, categories: list):
-        """
-        Inserts multiple categories into the database.
-        """
-        try:
-            self.session.bulk_insert_mappings(Category, categories)
-            self.session.commit()
-            # Return the number of categories inserted
-            return {"success": True, "message": f"{len(categories)} Category{'' if len(categories) == 1 else 's'} added successfully"}
-        except IntegrityError as e:
-            self.session.rollback()
-            return {"success": False, "error": "One of the submitted categories already exists with the same name."}
-        except Exception as e:
-            self.session.rollback()
-            return {"success": False, "error": f"An unexpected error occurred"}
+    # ? Select
+
+    async def get_categories(self):
+        async def operation(session):
+            result = await session.execute(select(Category))
+            data = result.scalars().all()
+            data = await self.query_helper.model_to_dict(data)
+            return {"message": self.generate_category_message(len(data), "fetched"), "data": data}
+        return await self.execute_query(operation)
     
-    """
-    Select
-    --------------------------------------------------
-    """
-
-    def get_all_categories(self):
-        """
-        Returns all categories from the database.
-        """
-        try:
-            result = self.session.query(Category).all()
-            if result is None:
-                return []
-            return self.query_helper.model_to_dict(result)
-        except Exception as e:
-            self.session.rollback()
-            raise e
-
-    def get_paged_categories(
-        self,
-        page: int = 0,
-        per_page: int = 15,
-        filters: dict = None,
-        order_by: str = "id",
-        order_direction: str = "asc"
-    ) -> list:
-        """
-        Returns a list of categories in the database, sorted and filtered according
-        to the input parameters.
-        """
-        try:
-            return self.query_helper.get_paged_data(
-                Category, page, per_page, filters, order_by, order_direction
-            )
-        except Exception as e:
-            self.session.rollback()
-            raise e
-
-    def get_categories_by_id(self, category_ids: list) -> list:
-        """
-        Returns a list of categories with the given IDs from the database.
-        """
-        try:
-            result = self.session.query(Category).filter(Category.id.in_(category_ids)).all()
-            if result is None:
-                return []
-            return self.query_helper.model_to_dict(result)
-        except Exception as e:
-            self.session.rollback()
-            raise e
+    async def fetch_via_id(self, id_list: list):
+        async def operation(session):
+            result = await session.execute(select(Category).where(Category.id.in_(id_list)))
+            data = result.scalars().all()
+            data = await self.query_helper.model_to_dict(data)
+            return {"message": self.generate_category_message(len(data), "fetched"), "data": data}
+        return await self.execute_query(operation)
     
-    """
-    Update
-    --------------------------------------------------
-    """
+    async def paged_categories(self, data: dict):
+        async def operation(session):
+            query = select(Category)
+            result = await self.query_helper.get_paged_data(session, Category,  data, query)
+            return {"data": {"items": result["data"], "total_count": result["total_count"]}, "message": "Categories fetched successfully"}
+        return await self.execute_query(operation)
+    
+    # ? Update
 
-    def update_categories(self, categories: list):
-        """
-        Updates the categories in the database.
-        """
-        try:
-            self.session.bulk_update_mappings(Category, categories)
+    async def update_categories(self, categories: list):
+        async def operation(session):
+            for category in categories:
+                stmt = (
+                    update(Category)
+                    .where(Category.id == category["id"])
+                    .values(**{key: value for key, value in category.items() if key != "id"})
+                )
+                await session.execute(stmt)
+            return {"message": self.generate_category_message(len(categories), "updated"), "data": None}
+        return await self.execute_query(operation)
+    
+    # ? Delete
+
+    async def delete_categories(self, categories: list):
+        async def operation(session):
+            result = await session.execute(Category.__table__.delete().where(Category.id.in_(categories)))
+            return {"message": self.generate_category_message(result.rowcount, "deleted"), "data": None}
+        return await self.execute_query(operation)
             
-            self.session.commit()
-            # Return the number of categories updated
-            return {"success": True, "message": f"{len(categories)} Category{'' if len(categories) == 1 else 's'} edited successfully"}
-        except IntegrityError as e:
-            self.session.rollback()
-            return {"success": False, "error": "One of the submitted categories already exists with the same name."}
-        except Exception as e:
-            self.session.rollback()
-            print(e)
-            return {"success": False, "error": f"An unexpected error occurred"}
-    
-    """
-    Delete
-    --------------------------------------------------
-    """
 
-    def delete_categories_by_id(self, category_ids: list):
-        """
-        Deletes the categories with the given IDs from the database.
-        """
-        try:
-            self.session.query(Category).filter(Category.id.in_(category_ids)).delete()
-            self.session.commit()
-
-            # Return the number of categories deleted
-            return {"success": True, "message": f"{len(category_ids)} Category{'' if len(category_ids) == 1 else 's'} deleted successfully"}
-        except Exception as e:
-            self.session.rollback()
-            return {"success": False, "error": f"An unexpected error occurred"}
-
+    def generate_category_message(self, count, action):
+        return f"{count} Categor{'y' if count == 1 else 'ies'} {action} successfully"    
