@@ -1,4 +1,8 @@
 from enum import Enum
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 # Config file
 # This file is used to store the configuration of the application
@@ -24,9 +28,9 @@ DEVELOPMENT_CONFIG = {
 }
 
 PRODUCTION_CONFIG = {
-    "DB_NAME": "bibliotech_pickharder",
-    "DB_USER": "bibliotech_pickharder",
-    "DB_PASSWORD": "2ef75e60cbf825309897ac4d7e723a0e5dd16389",
-    "DB_HOST": "0wsez.h.filess.io",
-    "DB_PORT": 3305,
+    "DB_NAME": os.getenv("DB_NAME"),
+    "DB_USER": os.getenv("DB_USER"),
+    "DB_PASSWORD": os.getenv("DB_PASSWORD"),
+    "DB_HOST": os.getenv("DB_HOST"),
+    "DB_PORT": os.getenv("DB_PORT"),
 }

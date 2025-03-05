@@ -6,6 +6,7 @@ __pycache__/
 *.pyc
 TODO.md
 *.code-workspace
+.env
 
 # allow
 storage/images/user_photos/default.png
