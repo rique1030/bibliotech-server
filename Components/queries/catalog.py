@@ -130,7 +130,6 @@ class CatalogQueries(BaseQuery):
             return {"message": self.generate_book_message(result.rowcount, "deleted"), "data": None}
         return await self.execute_query(operation)
 
-
     def generate_book_message(self, book_count, query_type):
         return f"{book_count} Book{'' if book_count == 1 else 's'} {query_type} successfully"
     

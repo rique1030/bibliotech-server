@@ -179,6 +179,26 @@ class UserQueries(BaseQuery):
             return {"data": result , "message": "User fetched successfully"}
         return await self.execute_query(operation)
 
+    async def count_all_users(self):
+        async def operation(session):
+            user_count = await session.execute(select(func.count(User.id)))
+            count = user_count.scalar()
+            return {"data": count, "message": "User count fetched successfully"}
+        return await self.execute_query(operation)
+
+    async def count_user_roles(self):
+        async def operation(session):
+            role = aliased(Role)
+            user = aliased(User)
+            role_count = await session.execute(select(
+                role.role_name,
+                role.color,
+                func.count(user.id).label("count")
+            ).join(user, role.id == user.role_id).group_by(role.role_name, role.color))
+            count = [{"label": row[0], "color": row[1], "value": row[2]} for row in role_count]
+            return {"data": count, "message": "User count by role fetched successfully"}
+        return await self.execute_query(operation)
+
     def generate_user_message(self, user_count, query_type):
         return f"{user_count} User{'' if user_count == 1 else 's'} {query_type} successfully"
     

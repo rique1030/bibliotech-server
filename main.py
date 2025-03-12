@@ -63,15 +63,7 @@ class MainServer:
 		self.socketio.on('connect', self.handle_connect)
 		self.socketio.on('disconnect', self.handle_disconnect)
 		self.socketio.on('mount_connection', self.mount_connection)
-		# self.socketio.on("*", self.catch_all)
 		self.app.add_url_rule('/clients', view_func=self.get_available_clients, methods=["GET"])
-	
-	# @sio.on("*")
-	# async def catch_all(event, sid, data=None):
-	# 	logging.info(f"Event: {event}")
-	# 	logging.info(f"Data: {data}")
-	# 	logging.info(f"SID: {sid}")
-
 
 	async def populate_tables(self):
 		await self.role_manager.role_queries.populate_roles()
