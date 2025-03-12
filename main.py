@@ -83,6 +83,7 @@ class MainServer:
 	# 	logging.info(f"Data: {data}")
 	# 	logging.info(f"SID: {sid}")
 
+
 	async def populate_tables(self):
 		await self.role_manager.role_queries.populate_roles()
 		await self.user_manager.user_queries.populate_users()
@@ -90,6 +91,12 @@ class MainServer:
 	@app.before_serving
 	async def before_serving():
 		logging.info("Starting the server...")
+
+	@app.after_request
+	async def add_ngrok_header(response):
+		response.headers['ngrok-skip-browser-warning'] = 'skip-browser-warning'
+		return response
+
 
 	# @app.before_request
 	# async def before_request():

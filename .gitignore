@@ -8,6 +8,8 @@ __pycache__/
 TODO.md
 *.code-workspace
 .env
+.wsl-venv
+.vscode
 
 # allow
 storage/images/user_photos/default.png

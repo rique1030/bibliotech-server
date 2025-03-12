@@ -58,10 +58,10 @@ class BookBorrowManager:
         user = await self.user_query.fetch_via_id([user_id])
 
         if not book or "data" not in book or len(book.get("data")) == 0:
-            await self.emit_response('request_denied', "Book not found", room=sid)
+            await self.emit_response('request_denied', "Scanned book does not exist.", room=sid)
             return
         if not user or "data" not in user or len(user.get("data")) == 0:
-            await self.emit_response('request_denied', "User not found", room=sid)
+            await self.emit_response('request_denied', "User does not exist.", room=sid)
             return
 
         book, user = book.get("data")[0], user.get("data")[0]
@@ -87,7 +87,7 @@ class BookBorrowManager:
         if request_id in self.requests:
             if is_review:
                 return True
-            await self.emit_response('request_denied', "Request already sent", room=request_id)
+            await self.emit_response('request_denied', "Your request is already on-going", room=request_id)
             return True
         return False
 
@@ -104,7 +104,7 @@ class BookBorrowManager:
     async def is_borrower_verified(self, request):
         logging.info(f"Verifying borrower {request['user']['first_name']} {request['user']['last_name']}")
         if not request["user"].get("is_verified"):
-            await self.emit_response('request_denied', "User not verified", room=request["request_id"])
+            await self.emit_response('request_denied', "User is not currently verified", room=request["request_id"])
             self.requests.pop(request["request_id"])
             return False
         return True
@@ -113,11 +113,11 @@ class BookBorrowManager:
         client = self.available_clients.get(client_id)
         logging.info(f"Checking availability for client {client_id}")
         if not client:
-            await self.emit_response('request_denied', "Client not available", room=request_id)
+            await self.emit_response('request_denied', "Client is currently unavailble.", room=request_id)
             self.requests.pop(request_id, None)
             return False
         if client.get("busy"):
-            await self.emit_response('request_denied', "Client is busy", room=request_id)
+            await self.emit_response('request_denied', "Client is currently busy", room=request_id)
             self.requests.pop(request_id, None)
             return False
         return True
@@ -132,7 +132,7 @@ class BookBorrowManager:
 
     async def handle_review_request(self, sid, data):
         if not sid in self.available_clients:
-            await self.emit_response('request_denied', "Please login first", room=sid)
+            await self.emit_response('request_denied', "You are currently not logged in. Please login first.", room=sid)
             return
         data = await self.parse_request(data)
         if not data or not await self.is_request_ongoing(data.get("request_id"), True):
@@ -169,7 +169,7 @@ class BookBorrowManager:
             logging.info("Request denied")
         else:
             borrow = data.get("borrow", True)
-            days = data.get("days", 1)
+            days = data.get("num_days", 1)
             result = None
             logging.info("Request approved")
             if borrow:

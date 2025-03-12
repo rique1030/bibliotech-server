@@ -1,9 +1,10 @@
 import re
 from enum import Enum
 import uuid
-from sqlalchemy.orm import declarative_base , relationship, validates, backref
+from sqlalchemy.orm import declarative_base , relationship, validates
 from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, Enum  
-from sqlalchemy.sql import func 
+from sqlalchemy.sql import func, text
+from sqlalchemy import event
 
 Base = declarative_base()
 
@@ -50,6 +51,10 @@ class User(Base):
     role_id = Column(String(36), ForeignKey('roles.id'), server_default="2",  nullable=False)
     is_verified = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, nullable=False, default=func.now())
+    # updates
+    name_updated = Column(DateTime, nullable=False, default=func.now() - text("INTERVAL 100 DAY"))
+    password_updated = Column(DateTime, nullable=False, default=func.now() - text("INTERVAL 100 DAY"))
+    email_updated = Column(DateTime, nullable=False, default=func.now() - text("INTERVAL 100 DAY"))    
 
     role = relationship("Role", back_populates="users")
     borrowed_books = relationship("BorrowedBook", back_populates="user")
@@ -59,6 +64,7 @@ class User(Base):
             "id": self.id,
             "email": self.email,
         }
+
 
 class Catalog(Base):
     __tablename__ = 'catalog'

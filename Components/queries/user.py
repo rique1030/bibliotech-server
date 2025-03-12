@@ -3,7 +3,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from Components.queries.base_query import BaseQuery
-from ..tables.models import Role, User
+from ..tables.models import BorrowedBook, Copy, Role, User, Catalog
 
 users = [
     {   
@@ -27,7 +27,6 @@ class UserQueries(BaseQuery):
 
     async def insert_users(self, users: list):
         async def operation(session):
-
             for user in users:
                 # removing unnecessary fields
                 if not user.get("id") == "4DM1N":
@@ -54,13 +53,11 @@ class UserQueries(BaseQuery):
     # ? select
     async def paged_users(self, payload: dict):
         async def operation(session):
-            # query = select(User)
             user = aliased(User)
             role = aliased(Role)
             query = select(
                 user.id,
                 user.profile_pic,
-                # (user.first_name + " " + user.last_name).label("full_name"),
                 user.first_name,
                 user.last_name,
                 user.email,
@@ -97,18 +94,37 @@ class UserQueries(BaseQuery):
     async def update_users(self, users: dict):
         async def operation(session):
             for user in users:
+                # fetch existing data
+                existing_user = await session.execute(select(User).where(User.id == user["id"]))
+                existing_user = existing_user.scalar_one_or_none()
+                if not existing_user:
+                    continue
+
                 # remove unecessary fields
                 user.pop("color", None)
                 user.pop("role_name", None)
                 user.pop("profile_pic_blob", None)
                 user.pop("created_at", None)
-                                
+                user.pop("name_updated", None)
+                user.pop("password_updated", None)
+                user.pop("email_updated", None)
+
+                if "password" in user and user["password"] != existing_user.password:
+                    user["password_updated"] = func.now()
+                if ("first_name" in user and user["first_name"] != existing_user.first_name) or \
+                    ("last_name" in user and user["last_name"] != existing_user.last_name):
+                    user["name_updated"] = func.now()
+                if "email" in user and user["email"] != existing_user.email:
+                    user["email_updated"] = func.now()
+
+                # save profile pic
                 profile_pic_buffer = user.pop("profile_pic_buffer", None)
                 if profile_pic_buffer:
                     profile_pic = await self.image_helper.convert_to_image(profile_pic_buffer)
                     profile_pic_name = await self.image_helper.save_image(profile_pic, user["id"], self.user_photos_path )
                     user["profile_pic"] = profile_pic_name
-                
+
+                # update user
                 stmt = (
                     update(User)
                     .where(User.id == user["id"])
@@ -138,6 +154,30 @@ class UserQueries(BaseQuery):
             return {"data": None, "message": "Users already populated"}
         return await self.execute_query(operation)
 
+    async def get_borrowed_books(self, user_id: str):
+        async def operation(session):
+            catalog = aliased(Catalog)
+            copy = aliased(Copy)
+            borrow = aliased(BorrowedBook)
+            result = await session.execute(select(
+                borrow.id, 
+                borrow.copy_id,
+                copy.access_number,
+                copy.status,
+                copy.catalog_id,
+                catalog.call_number,
+                catalog.title,
+                catalog.author,
+                catalog.publisher,
+                catalog.cover_image,
+                catalog.description
+            )
+                .join(copy, borrow.copy_id == copy.id)
+                .join(catalog, copy.catalog_id == catalog.id)
+                .where(borrow.user_id == user_id))
+            result = [dict(row) for row in result.mappings()]
+            return {"data": result , "message": "User fetched successfully"}
+        return await self.execute_query(operation)
 
     def generate_user_message(self, user_count, query_type):
         return f"{user_count} User{'' if user_count == 1 else 's'} {query_type} successfully"
