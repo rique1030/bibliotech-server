@@ -72,17 +72,7 @@ class MainServer:
 		self.socketio.on('connect', self.handle_connect)
 		self.socketio.on('disconnect', self.handle_disconnect)
 		self.socketio.on('mount_connection', self.mount_connection)
-		# self.socketio.on("*", self.catch_all)
-		self.app.add_url_rule('/clients',
-		                      view_func=self.get_available_clients,
-		                      methods=["GET"])
-
-	# @sio.on("*")
-	# async def catch_all(event, sid, data=None):
-	# 	logging.info(f"Event: {event}")
-	# 	logging.info(f"Data: {data}")
-	# 	logging.info(f"SID: {sid}")
-
+		self.app.add_url_rule('/clients', view_func=self.get_available_clients, methods=["GET"])
 
 	async def populate_tables(self):
 		await self.role_manager.role_queries.populate_roles()
@@ -96,12 +86,6 @@ class MainServer:
 	async def add_ngrok_header(response):
 		response.headers['ngrok-skip-browser-warning'] = 'skip-browser-warning'
 		return response
-
-
-	# @app.before_request
-	# async def before_request():
-	# 	logging.info(f"\nIncoming request...")
-	# 	logging.info(request.url)
 
 	@app.route("/test_connection", methods=["GET"])
 	async def test():

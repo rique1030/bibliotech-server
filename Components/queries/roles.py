@@ -128,37 +128,9 @@ class RoleQueries(BaseQuery):
             return {"data": None, "message": "Roles already populated"}
         return await self.execute_query(operation)
 
+    
 
     def generate_role_message(self, role_count, query_type):
         return f"{role_count} Role{'' if role_count == 1 else 's'} {query_type} successfully"
     
 
-    # """
-    # Delete
-    # --------------------------------------------------
-    # """
-    # async def delete_roles_by_id(self, role_ids: list):
-    #     """
-    #     Deletes the roles with the given IDs from the database.
-    #     """
-    #     async with self.session_factory() as session:
-    #         try:
-    #             await session.query(Role).filter(Role.id.in_(role_ids)).delete()
-    #             await session.commit()
-    #             return {"success": True, "message": f"{len(role_ids)} Role{'' if len(role_ids) == 1 else 's'} deleted successfully"}
-    #         except IntegrityError as e:
-    #             await session.rollback()
-    #             return {"success": False, "error": "The role cannot be deleted because it is currently in use. Please remove it from all accounts before deleting."}
-    #         except Exception as e:
-    #             await session.rollback()
-    #             return {"success": False, "error": f"An unexpected error occurred"}
-    
-    #     async with self.session_factory() as session:
-    #         try:
-    #             roles_count = await session.execute(select(func.count(Role.id)))
-    #             count = roles_count.scalar()
-    #             if count == 0:
-    #                 await self.insert_multiple_roles(roles)
-    #         except Exception as e:
-    #             await session.rollback()
-    #             raise Exception(f"Error populating roles: {e}")

@@ -56,3 +56,8 @@ class CopyManager:
             ids = await request.get_json()
             result = await self.copy.fetch_via_id(ids)
             return result
+        
+        @app.route('/copy/count', methods=['GET'])
+        async def count_copies():
+            result = await self.copy.count_all_copies()
+            return result

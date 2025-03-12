@@ -168,6 +168,15 @@ class CopyQueries(BaseQuery):
             return {"message": self.generate_book_message(result.rowcount, "deleted"), "data": None}
         return await self.execute_query(operation)
 
+    async def count_all_copies(self):
+        async def operation(session):
+            result = await session.execute(
+                select(func.count(Copy.id))
+            )
+            result = result.scalar()
+            return {"data": result, "message": "Copies counted successfully"}
+        return await self.execute_query(operation)
+
     def generate_book_message(self, book_count, query_type):
         return f"{book_count} Book Cop{'y' if book_count == 1 else 'ies'} {query_type} successfully"
     

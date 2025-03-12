@@ -54,3 +54,13 @@ class UserManager:
             data = await request.get_json()
             result = await self.user_queries.get_borrowed_books(data)
             return result
+
+        @app.route("/user/count", methods=["GET"])
+        async def count_users():
+            result = await self.user_queries.count_all_users()
+            return result
+
+        @app.route("/user/count:role", methods=["GET"])
+        async def count_users_by_role():
+            result = await self.user_queries.count_user_roles()
+            return result
