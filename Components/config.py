@@ -16,7 +16,7 @@ class DeploymentMode(Enum):
 REQUEST_TIMEOUT = 10 # Seconds before a request is timed out
 REVIEW_TIMEOUT = 30 # Additional seconds added to the request timeout
 
-DEPLOYMENT_MODE = DeploymentMode.PRODUCTION
+DEPLOYMENT_MODE = DeploymentMode.DEVELOPMENT
 
 
 DEVELOPMENT_CONFIG = {

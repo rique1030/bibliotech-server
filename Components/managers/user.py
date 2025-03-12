@@ -49,3 +49,8 @@ class UserManager:
             result = await self.user_queries.delete_users(data)
             return result
         
+        @app.route("/user/fetch:borrow", methods=["POST"])
+        async def fetch_borrowed():
+            data = await request.get_json()
+            result = await self.user_queries.get_borrowed_books(data)
+            return result
