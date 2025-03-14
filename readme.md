@@ -1,56 +1,54 @@
-# Bibliotech Server
+# BiblioTech Server 📡  
 
-Bibliotech Server is the backend for Bibliotech Manager (a Library Management System) and Bibliotech App (a catalog and book borrowing application). It is designed for use in a school environment to facilitate book management, tracking, and borrowing.
+![GitHub release](https://img.shields.io/github/v/release/riquelicious/BiblioTechServer?style=flat-square)  
+![GitHub issues](https://img.shields.io/github/issues/riquelicious/BiblioTechServer?style=flat-square)  
+![GitHub last commit](https://img.shields.io/github/last-commit/riquelicious/BiblioTechServer?style=flat-square)  
 
-## Features
-- Handles book catalog and borrowing system
-- Supports real-time communication via Socket.IO
-- Uses an asynchronous database connection with SQLAlchemy
+BiblioTech Server is the **backend** for **BiblioTech Manager** (a desktop library management system) and **BiblioTech Mobile** (a book catalog and borrowing app). It provides an API and real-time communication to handle book transactions and user roles.  
 
-## Tech Stack
-- **Backend Framework**: Quart
-- **Database**: MariaDB
-- **Realtime Communication**: Socket.IO
-- **ORM**: Async SQLAlchemy
+## 📌 Features  
+- 📚 **Book Catalog & Copy Management** – Stores library data  
+- 🔄 **Borrow & Return System** – Processes book transactions  
+- 📡 **Real-time Updates** – Uses WebSockets (Socket.IO) for instant updates  
+- ⚡ **Asynchronous Performance** – Fast & non-blocking backend (Quart + async SQLAlchemy)  
+- 💾 **MariaDB Support** – Uses MySQL-compatible database  
 
-## Installation & Setup
-### Prerequisites
-- Python 3.x installed
-- MariaDB 11.5.2 (or later) installed ([Download](https://mariadb.org/download/))
+## 🛠 Tech Stack  
+- **Backend Framework**: Quart (async Flask alternative)  
+- **Database**: MariaDB  
+- **Realtime Communication**: Socket.IO  
+- **ORM**: Async SQLAlchemy  
 
-### Steps
-1. Clone the repository:
-   ```sh
-   git clone https://github.com/yourusername/bibliotech-server.git
-   cd bibliotech-server
+## 📥 Installation & Setup  
+### Prerequisites  
+- **Python 3.x** installed  
+- **MariaDB 11.5.2+** ([Download](https://mariadb.org/download/))  
+
+### Steps  
+1. Clone the repository:  
    ```
-2. Install dependencies:
-   ```sh
+   git clone https://github.com/riquelicious/BiblioTechServer.git  
+   cd BiblioTechServer  
+   ```
+
+2. Install dependencies:  
+   ```
    pip install -r requirements.txt
    ```
-3. Configure the database:
-   - Start MariaDB
-   - Create a database for Bibliotech Server
-   - Set up any required tables (schema details needed)
-4. Run the server:
-   ```sh
-   python main.py
-   ```
 
-## Usage
-Bibliotech Server provides APIs and WebSocket events for managing the library system. Details on endpoints and events will be added later.
+4. Configure the database:  
+   - Start MariaDB  
+   - Create a database for BiblioTech Server  
+   - Set up tables (schema details needed)  
 
-## Deployment
-Bibliotech Server can be run locally or hosted using a service that supports Quart and MariaDB. No authentication is implemented.
+5. Run the server:  
+   python main.py  
 
-## License
-No license has been chosen yet.
+## 🚀 Usage  
+BiblioTech Server handles API requests and WebSocket events for managing the library system.  
 
-## Future Plans
-- Add authentication and authorization
-- Improve API documentation
-- Implement logging and error handling
+## 🤝 Contributions  
+This is a personal project, and contributions are not expected at this time.  
 
-## Contributions
-This is a personal project, and contributions are not expected at this time.
-
+## 📄 License  
+No license has been chosen yet.  
