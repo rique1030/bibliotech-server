@@ -1,7 +1,7 @@
 import asyncio
 import json
 from tqdm.asyncio import tqdm
-from quart import request
+from quart import request, Quart
 from tabulate import tabulate
 import logging
 from Components.config import REQUEST_TIMEOUT, REVIEW_TIMEOUT
@@ -11,7 +11,8 @@ from Components.queries.book_borrow import BorrowedBookQueries
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 class BookBorrowManager:
-    def __init__(self, socket, db: Database):
+    def __init__(self, socket, db: Database, app: Quart):
+        self.register_routes(app)
         self.socket = socket
         self.book_query = None
         self.user_query = None
@@ -23,6 +24,31 @@ class BookBorrowManager:
         self.socket.on('request', self.handle_request)
         self.socket.on('review_request', self.handle_review_request)
         self.socket.on('request_response', self.handle_request_response)
+
+    def register_routes(self, app: Quart):
+        @app.route('/copy/transaction', methods=['POST'])
+        async def copy_transaction():
+            data = await request.get_json()
+            copy_access_number = data.pop('access_number', "")
+            user_school_id = data.pop('school_id', "")
+            is_borrow = data.pop('borrow', True)
+            user = await self.user_query.fetch_via_school_id([user_school_id])
+            if not user or "data" not in user or len(user.get("data")) == 0:
+                return {"message": "User not found", "success": False }
+            user = user.get("data")[0]
+            book = await self.book_query.fetch_via_access_number([copy_access_number])
+            print(book)
+            if not book or "data" not in book or len(book.get("data")) == 0:
+                return {"message": "Book not found", "success": False }
+            book = book.get("data")[0]
+
+            result = None
+
+            if is_borrow:
+                result = await self.book_borrow.insert_borrow(book, user)
+            else:
+                result = await self.book_borrow.delete_borrow(book, user)
+            return result
 
     def set_queries(self, book_manager, user_manager):
         self.book_query = book_manager.copy

@@ -4,6 +4,9 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from Components.queries.base_query import BaseQuery
 from ..tables.models import BorrowedBook, Copy, Role, User, Catalog
+from hashlib import pbkdf2_hmac
+
+# KEY = b"1234567890123456" # testing purposes \\ put it in env || should be 16 byte
 
 users = [
     {   
@@ -24,7 +27,6 @@ class UserQueries(BaseQuery):
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]):
         super().__init__(session_factory)
     # ? Insert
-
     async def insert_users(self, users: list):
         async def operation(session):
             for user in users:
@@ -34,8 +36,6 @@ class UserQueries(BaseQuery):
                     user["id"] = str(uuid.uuid4())
                 user.pop("color", None)
                 user.pop("role_name", None)
-
-                # saving profile pic
                 profile_pic_buffer = user.pop("profile_pic_buffer", None)
                 if profile_pic_buffer:
                     profile_pic = await self.image_helper.convert_to_image(profile_pic_buffer)
@@ -43,8 +43,6 @@ class UserQueries(BaseQuery):
                     user["profile_pic"] = profile_pic_name
                 else:
                     user["profile_pic"] = "default"
-
-
                 b = User(**user)
                 session.add(b)
             return {"message": self.generate_user_message(len(users), "added"), "data": None}  
@@ -61,7 +59,6 @@ class UserQueries(BaseQuery):
                 user.first_name,
                 user.last_name,
                 user.email,
-                user.password,
                 user.school_id,
                 role.role_name,
                 role.color,
@@ -77,13 +74,20 @@ class UserQueries(BaseQuery):
             result = await session.execute(select(User).where(User.id.in_(ids)))
             data = result.scalars().all()
             data = await self.query_helper.model_to_dict(data)
-            
             return {"data": data , "message": "User fetched successfully"}
         return await self.execute_query(operation)
     
     async def fetch_via_email_and_password(self, email: str, password: str):
         async def operation(session):
             result = await session.execute(select(User).where(User.email == email, User.password == password))
+            data = result.scalars().all()
+            data = await self.query_helper.model_to_dict(data)
+            return {"data": data , "message": "User fetched successfully"}
+        return await self.execute_query(operation)
+
+    async def fetch_via_school_id(self, school_id: str):
+        async def operation(session):
+            result = await session.execute(select(User).where(User.school_id == school_id))
             data = result.scalars().all()
             data = await self.query_helper.model_to_dict(data)
             return {"data": data , "message": "User fetched successfully"}

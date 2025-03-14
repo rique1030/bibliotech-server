@@ -59,10 +59,10 @@ class MainServer:
 		self.copy = CopyManager(self.app, self.db)
 		# ? user
 		self.role_manager = RoleManager(self.app, self.db)
-		self.user_manager = UserManager(self.app,
-		                                self.db)  # ? > roles first for the role id
+		self.user_manager = UserManager(self.app,self.db)  
+		# ? > roles first for the role id
 		# ? records
-		self.book_borrow_manager = BookBorrowManager(self.socketio, self.db)
+		self.book_borrow_manager = BookBorrowManager(self.socketio, self.db, self.app)
 		self.book_borrow_manager.set_queries(self.copy, self.user_manager)
 		self.record_manager = RecordManager(self.app)
 		self.record_manager.set_queries(self.copy, self.book_borrow_manager,
