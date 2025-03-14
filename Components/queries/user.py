@@ -114,7 +114,10 @@ class UserQueries(BaseQuery):
                 user.pop("email_updated", None)
 
                 if "password" in user and user["password"] != existing_user.password:
-                    user["password_updated"] = func.now()
+                    if user["password"] == "":
+                        user.pop("password")
+                    else:
+                        user["password_updated"] = func.now()
                 if ("first_name" in user and user["first_name"] != existing_user.first_name) or \
                     ("last_name" in user and user["last_name"] != existing_user.last_name):
                     user["name_updated"] = func.now()
