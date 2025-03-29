@@ -1,7 +1,5 @@
 from itertools import zip_longest
-import signal
-import sys
-from quart import Quart, send_from_directory, request
+from quart import Quart, send_from_directory
 # import quart
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
@@ -9,7 +7,8 @@ from socketio import AsyncServer, ASGIApp
 import asyncio
 from quart_cors import cors
 from tabulate import tabulate
-from Components.config import *
+# from Components.config import *
+# from Components.config import
 from Components.db import Database
 # ? Books
 from Components.managers.book_borrow import BookBorrowManager
@@ -59,7 +58,7 @@ class MainServer:
 		self.copy = CopyManager(self.app, self.db)
 		# ? user
 		self.role_manager = RoleManager(self.app, self.db)
-		self.user_manager = UserManager(self.app,self.db)  
+		self.user_manager = UserManager(self.app,self.db)
 		# ? > roles first for the role id
 		# ? records
 		self.book_borrow_manager = BookBorrowManager(self.socketio, self.db, self.app)
@@ -82,10 +81,6 @@ class MainServer:
 	async def before_serving():
 		logging.info("Starting the server...")
 
-	@app.after_request
-	async def add_ngrok_header(response):
-		response.headers['ngrok-skip-browser-warning'] = 'skip-browser-warning'
-		return response
 
 	@app.route("/test_connection", methods=["GET"])
 	async def test():
@@ -93,8 +88,12 @@ class MainServer:
 
 	@app.route('/<path:filename>')
 	async def get_file(filename):
+
+		if not os.path.exists(app.static_folder or "./storage"):
+			logging.error("Static folder not found")
+			return "Static folder not found"
 		logging.info(f"Requested file: {filename}")
-		return await send_from_directory(app.static_folder, filename)
+		return await send_from_directory(app.static_folder or "./sotorage", filename)
 
 	async def get_available_clients(self):
 		return {
@@ -139,7 +138,6 @@ class MainServer:
 		self.book_borrow_manager.unauthenticated_connections.discard(sid)
 		await self.show_connections()
 
-
 async def main():
 	server = MainServer()
 	await server.db.init_db()
@@ -148,40 +146,7 @@ async def main():
 	config = Config()
 	config.bind = ["0.0.0.0:5000"]
 
-	# Run Hypercorn in the background
-	server_task = asyncio.create_task(serve(server.app, config=config))
-
-	stop_event = asyncio.Event()
-
-	async def shutdown():
-		logging.info("Stopping server...")
-		stop_event.set()
-		server_task.cancel()
-		try:
-			await server_task
-		except asyncio.CancelledError:
-			pass
-		# Ensure database connections are properly closed
-		# await server.db.close()
-
-	if sys.platform != "win32":  # Signal handling only for non-Windows
-		loop = asyncio.get_running_loop()
-		for sig in (signal.SIGINT, signal.SIGTERM):
-			loop.add_signal_handler(sig, lambda: asyncio.create_task(shutdown()))
-	else:
-		# Windows: Use a separate task to listen for keyboard interrupt
-		async def windows_shutdown_handler():
-			try:
-				await asyncio.get_running_loop().run_in_executor(
-				    None, input, "\nPress Enter to stop...")
-			except Exception:
-				pass
-			await shutdown()
-
-		asyncio.create_task(windows_shutdown_handler())
-
-	await stop_event.wait()
-
+	await serve(server.app, config=config)
 
 if __name__ == "__main__":
 	try:

@@ -1,0 +1,22 @@
+[0;1;32m●[0m dbus-broker.service - D-Bus System Message Bus
+     Loaded: loaded (]8;;file://archlinux/usr/lib/systemd/system/dbus-broker.service\/usr/lib/systemd/system/dbus-broker.service]8;;\; [0;1;38:5:185mdisabled[0m; preset: [0;1;38:5:185mdisabled[0m)
+     Active: [0;1;32mactive (running)[0m since Sat 2025-03-29 08:22:58 PST; 3h 9min ago
+ Invocation: cfb1e50a622a493f8d9aea9ee5b0fbb2
+TriggeredBy: [0;1;32m●[0m dbus.socket
+       Docs: ]8;;man:dbus-broker-launch(1)\man:dbus-broker-launch(1)]8;;\
+   Main PID: 459 (dbus-broker-lau)
+      Tasks: 2[0;38;5;245m (limit: 11574)[0m
+     Memory: 4.1M (peak: 7.2M, swap: 208K, swap peak: 228K, zswap: 16.1K)
+        CPU: 595ms
+     CGroup: /system.slice/dbus-broker.service
+             ├─[0;38;5;245m459 /usr/bin/dbus-broker-launch --scope system --audit[0m
+             └─[0;38;5;245m460 dbus-broker --log 4 --controller 9 --machine-id 1f57263d595f4bbb87439cf661952b12 --max-bytes 536870912 --max-fds 4096 --max-matches 131072 --audit[0m
+
+Mar 29 08:22:58 archlinux systemd[1]: Starting D-Bus System Message Bus...
+Mar 29 08:22:58 archlinux systemd[1]: Started D-Bus System Message Bus.
+Mar 29 08:22:58 archlinux dbus-broker-launch[459]: Ready
+Mar 29 08:23:00 archlinux dbus-broker-launch[459]: [0;1;38:5:185m[0;1;39m[0;1;38:5:185mActivation request for 'org.freedesktop.Avahi' failed: The systemd unit 'dbus-org.freedesktop.Avahi.service' could not be found.[0m
+Mar 29 08:23:01 archlinux dbus-broker-launch[459]: [0;1;38:5:185m[0;1;39m[0;1;38:5:185mActivation request for 'org.freedesktop.home1' failed: The systemd unit 'dbus-org.freedesktop.home1.service' could not be found.[0m
+Mar 29 08:23:04 archlinux dbus-broker-launch[459]: [0;1;38:5:185m[0;1;39m[0;1;38:5:185mActivation request for 'org.freedesktop.resolve1' failed: The systemd unit 'dbus-org.freedesktop.resolve1.service' could not be found.[0m
+Mar 29 08:23:43 archlinux dbus-broker-launch[459]: [0;1;38:5:185m[0;1;39m[0;1;38:5:185mActivation request for 'org.freedesktop.ModemManager1' failed: The systemd unit 'dbus-org.freedesktop.ModemManager1.service' could not be found.[0m
+Mar 29 08:23:48 archlinux dbus-broker-launch[459]: [0;1;38:5:185m[0;1;39m[0;1;38:5:185mActivation request for 'org.bluez' failed: The systemd unit 'dbus-org.bluez.service' could not be found.[0m

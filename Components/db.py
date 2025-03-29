@@ -1,6 +1,6 @@
 from quart import Quart
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from Components.config import *
+from Components.config import DeploymentMode, DEPLOYMENT_MODE, DEVELOPMENT_CONFIG, PRODUCTION_CONFIG
 from Components.tables.models import Base
 
 class Database:
@@ -23,7 +23,7 @@ class Database:
             pool_recycle=3600,
             pool_pre_ping=False
         )
-        
+
         self.Session = async_sessionmaker(
             bind=self.engine,
             expire_on_commit=False
@@ -56,4 +56,3 @@ class Database:
     async def get_session(self):
         async with self.Session() as session:
             yield session
-

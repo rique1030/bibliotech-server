@@ -4,24 +4,34 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from Components.queries.base_query import BaseQuery
 from ..tables.models import BorrowedBook, Copy, Role, User, Catalog
-from hashlib import pbkdf2_hmac
+import random
+import string
+from Components.config import SERVER_EMAIL, SERVER_PASSWORD
+import aiosmtplib
+import asyncio
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # KEY = b"1234567890123456" # testing purposes \\ put it in env || should be 16 byte
 
 users = [
-    {   
+    {
         "id": "4DM1N",
         "profile_pic": "default",
         "first_name": "admin",
         "last_name": "admin",
         "email": "admin@admin.com",
-        "password": "admin", 
+        "password": "admin",
         "school_id": "4DM1N",
         "role_id": "ADMIN",
         "is_verified": True,
         "created_at": None,
     }
 ]
+
+chars = string.ascii_letters + string.digits  # a-z, A-Z, 0-9
+
+
 
 class UserQueries(BaseQuery):
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]):
@@ -30,6 +40,9 @@ class UserQueries(BaseQuery):
     async def insert_users(self, users: list):
         async def operation(session):
             for user in users:
+                existing = await session.execute(select(User).where(User.email == user["email"]))
+                if existing.scalar_one_or_none():
+                    return {"message": f"User with email {user['email']} already exists", "data": None}
                 # removing unnecessary fields
                 if not user.get("id") == "4DM1N":
                     user.pop("id", None)
@@ -43,11 +56,17 @@ class UserQueries(BaseQuery):
                     user["profile_pic"] = profile_pic_name
                 else:
                     user["profile_pic"] = "default"
+
+                user["password"] = "BTECH" + ''.join(random.choices(chars, k=6))
+                user["password_updated"] = "0000-00-00 00:00:00"
                 b = User(**user)
                 session.add(b)
-            return {"message": self.generate_user_message(len(users), "added"), "data": None}  
+                if user["id"] != "4DM1N":
+                    await self.send_email(user["email"], user["id"], user["password"])
+                # await self.send_email(user["email"], user["id"])
+            return {"message": self.generate_user_message(len(users), "added"), "data": None}
         return await self.execute_query(operation)
-    
+
     # ? select
     async def paged_users(self, payload: dict):
         async def operation(session):
@@ -76,7 +95,7 @@ class UserQueries(BaseQuery):
             data = await self.query_helper.model_to_dict(data)
             return {"data": data , "message": "User fetched successfully"}
         return await self.execute_query(operation)
-    
+
     async def fetch_via_email_and_password(self, email: str, password: str):
         async def operation(session):
             result = await session.execute(select(User).where(User.email == email, User.password == password))
@@ -92,10 +111,10 @@ class UserQueries(BaseQuery):
             data = await self.query_helper.model_to_dict(data)
             return {"data": data , "message": "User fetched successfully"}
         return await self.execute_query(operation)
-    
+
     # ? Update
 
-    async def update_users(self, users: dict):
+    async def update_users(self, users: list):
         async def operation(session):
             for user in users:
                 # fetch existing data
@@ -167,7 +186,7 @@ class UserQueries(BaseQuery):
             copy = aliased(Copy)
             borrow = aliased(BorrowedBook)
             result = await session.execute(select(
-                borrow.id, 
+                borrow.id,
                 borrow.copy_id,
                 copy.access_number,
                 copy.status,
@@ -208,4 +227,56 @@ class UserQueries(BaseQuery):
 
     def generate_user_message(self, user_count, query_type):
         return f"{user_count} User{'' if user_count == 1 else 's'} {query_type} successfully"
-    
+
+
+    async def send_email(self, to_email:str, id: str, temp_password: str):
+        smtp_server = "smtp.postmarkapp.com"
+        smtp_port = 587
+        sender_email = SERVER_EMAIL or ""
+        sender_password = SERVER_PASSWORD or ""
+
+        base_url = "http://localhost:5000/verify-email?id=" + id #change
+
+        msg = MIMEMultipart()
+        msg["From"] = sender_email
+        msg["To"] = to_email
+        msg["Subject"] = "Verify your email - Bibliotech"
+        msg["X-PM-Message-Stream"] = "verifyemail"
+
+        body = f"""
+        <html>
+
+        <body>
+            <H2>Hello,</H2>
+            <h4>Please verify your email by clicking the button below:</h4>
+            <p><a href="{base_url}" style="
+                    	text-decoration: none;
+                    	background-color: #5b40e4;
+                    	color: #FFFFFF;
+                    	padding:5px 50px;
+                        border-radius: 5px;
+				text-transform: uppercase;
+                    	font-weight: bold;
+                    	box-sizing: border-box;
+                    ">Verify Email</a></p>
+            <p style="color: rgba(0,0,0,0.5); font-size: 12px;">If you did not request this, please ignore this email.</p>
+            <h3>Your temporary password is: </h3> <code style="background-color: rgba(0,0,0,0.2);
+                               padding:5px;
+                               border-radius: 5px;">{temp_password}</code>
+            <h5>Thank you!</h5>
+        </body>
+        </html>
+        """
+
+        msg.attach(MIMEText(body, "html"))
+        print(f"Sending email to {to_email}...")
+
+        try:
+            smtp = aiosmtplib.SMTP(hostname=smtp_server, port=smtp_port)
+            await smtp.connect()
+            await smtp.login(sender_password, sender_password)
+            await smtp.sendmail(sender_email, to_email, msg.as_string())
+            await smtp.quit()
+            print(f"✅ Email sent to {to_email}")
+        except Exception as e:
+            print(f"❌ Failed to send email: {e}")

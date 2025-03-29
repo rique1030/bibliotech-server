@@ -35,3 +35,7 @@ PRODUCTION_CONFIG = {
     "DB_HOST": os.getenv("DB_HOST"),
     "DB_PORT": int(os.getenv("DB_PORT", "3306")),  # Convert to int with default
 }
+
+
+SERVER_EMAIL = os.getenv("SERVER_EMAIL")
+SERVER_PASSWORD = os.getenv("SERVER_PASSWORD")

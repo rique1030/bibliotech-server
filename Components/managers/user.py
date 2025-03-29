@@ -9,14 +9,14 @@ class UserManager:
         self.im = ImageManager()
 
     def register_routes(self, app: Quart):
-        
+
         @app.route("/user/insert", methods=["POST"])
         async def insert_multiple_users():
             users = await request.get_json()
             #TODO add images
             result = await self.user_queries.insert_users(users)
             return result
-        
+
         @app.route("/user/paged", methods=["POST"])
         async def paged_users():
             data = await request.get_json()
@@ -28,7 +28,7 @@ class UserManager:
             data = await request.get_json()
             result = await self.user_queries.fetch_via_id(data)
             return result
-        
+
         @app.route("/user/fetch:login", methods=["POST"])
         async def fetch_via_login():
             data = await request.get_json()
@@ -36,19 +36,19 @@ class UserManager:
             passowrd = data.get("password")
             result = await self.user_queries.fetch_via_email_and_password(email, passowrd)
             return result
-        
+
         @app.route("/user/update", methods=["POST"])
         async def update_users():
             data = await request.get_json()
             result = await self.user_queries.update_users(data)
             return result
-        
+
         @app.route("/user/delete", methods=["POST"])
         async def delete_users_by_id():
             data = await request.get_json()
             result = await self.user_queries.delete_users(data)
             return result
-        
+
         @app.route("/user/fetch:borrow", methods=["POST"])
         async def fetch_borrowed():
             data = await request.get_json()
@@ -64,3 +64,20 @@ class UserManager:
         async def count_users_by_role():
             result = await self.user_queries.count_user_roles()
             return result
+
+        @app.route("/verify-email")
+        async def verify_email():
+            id = request.args.get("id")
+            if not id:
+                return {"success": False, "message": "No id provided"}
+            user = await self.user_queries.fetch_via_id([id])
+            user = user.get("data")
+            if not user:
+                return "Email verification failed", 400
+            if user[0].get("is_verified"):
+                return "Email already verified", 200
+            account = [{"id": id, "is_verified": True}]
+            result = await self.user_queries.update_users(account)
+            if result.get("success"):
+                return "Email verified", 200
+            return "Email verification failed", 400
