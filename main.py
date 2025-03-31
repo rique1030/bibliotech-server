@@ -58,10 +58,11 @@ class MainServer:
 		self.copy = CopyManager(self.app, self.db)
 		# ? user
 		self.role_manager = RoleManager(self.app, self.db)
-		self.user_manager = UserManager(self.app,self.db)
+		self.user_manager = UserManager(self.app, self.db)
 		# ? > roles first for the role id
 		# ? records
-		self.book_borrow_manager = BookBorrowManager(self.socketio, self.db, self.app)
+		self.book_borrow_manager = BookBorrowManager(self.socketio, self.db,
+		                                             self.app)
 		self.book_borrow_manager.set_queries(self.copy, self.user_manager)
 		self.record_manager = RecordManager(self.app)
 		self.record_manager.set_queries(self.copy, self.book_borrow_manager,
@@ -71,7 +72,9 @@ class MainServer:
 		self.socketio.on('connect', self.handle_connect)
 		self.socketio.on('disconnect', self.handle_disconnect)
 		self.socketio.on('mount_connection', self.mount_connection)
-		self.app.add_url_rule('/clients', view_func=self.get_available_clients, methods=["GET"])
+		self.app.add_url_rule('/clients',
+		                      view_func=self.get_available_clients,
+		                      methods=["GET"])
 
 	async def populate_tables(self):
 		await self.role_manager.role_queries.populate_roles()
@@ -81,10 +84,9 @@ class MainServer:
 	async def before_serving():
 		logging.info("Starting the server...")
 
-
 	@app.route("/test_connection", methods=["GET"])
 	async def test():
-		return "Server is running as expected"
+		return {"message": "Server is running", "success": True}
 
 	@app.route('/<path:filename>')
 	async def get_file(filename):
@@ -93,7 +95,8 @@ class MainServer:
 			logging.error("Static folder not found")
 			return "Static folder not found"
 		logging.info(f"Requested file: {filename}")
-		return await send_from_directory(app.static_folder or "./sotorage", filename)
+		return await send_from_directory(app.static_folder or "./sotorage",
+		                                 filename)
 
 	async def get_available_clients(self):
 		return {
@@ -138,6 +141,7 @@ class MainServer:
 		self.book_borrow_manager.unauthenticated_connections.discard(sid)
 		await self.show_connections()
 
+
 async def main():
 	server = MainServer()
 	await server.db.init_db()
@@ -147,6 +151,7 @@ async def main():
 	config.bind = ["0.0.0.0:5000"]
 
 	await serve(server.app, config=config)
+
 
 if __name__ == "__main__":
 	try:

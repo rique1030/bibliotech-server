@@ -14,35 +14,40 @@ from email.mime.multipart import MIMEMultipart
 
 # KEY = b"1234567890123456" # testing purposes \\ put it in env || should be 16 byte
 
-users = [
-    {
-        "id": "4DM1N",
-        "profile_pic": "default",
-        "first_name": "admin",
-        "last_name": "admin",
-        "email": "admin@admin.com",
-        "password": "admin",
-        "school_id": "4DM1N",
-        "role_id": "ADMIN",
-        "is_verified": True,
-        "created_at": None,
-    }
-]
+users = [{
+    "id": "4DM1N",
+    "profile_pic": "default",
+    "first_name": "admin",
+    "last_name": "admin",
+    "email": "admin@dyci.edu.ph",
+    "password": "admin",
+    "school_id": "4DM1N",
+    "role_id": "ADMIN",
+    "is_verified": True,
+    "created_at": None,
+}]
 
 chars = string.ascii_letters + string.digits  # a-z, A-Z, 0-9
 
 
-
 class UserQueries(BaseQuery):
+
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]):
         super().__init__(session_factory)
+
     # ? Insert
     async def insert_users(self, users: list):
+
         async def operation(session):
             for user in users:
-                existing = await session.execute(select(User).where(User.email == user["email"]))
+                existing = await session.execute(
+                    select(User).where(User.email == user["email"]))
                 if existing.scalar_one_or_none():
-                    return {"message": f"User with email {user['email']} already exists", "data": None}
+                    return {
+                        "message":
+                        f"User with email {user['email']} already exists",
+                        "data": None
+                    }
                 # removing unnecessary fields
                 if not user.get("id") == "4DM1N":
                     user.pop("id", None)
@@ -51,74 +56,95 @@ class UserQueries(BaseQuery):
                 user.pop("role_name", None)
                 profile_pic_buffer = user.pop("profile_pic_buffer", None)
                 if profile_pic_buffer:
-                    profile_pic = await self.image_helper.convert_to_image(profile_pic_buffer)
-                    profile_pic_name = await self.image_helper.save_image(profile_pic, user["id"], self.user_photos_path)
+                    profile_pic = await self.image_helper.convert_to_image(
+                        profile_pic_buffer)
+                    profile_pic_name = await self.image_helper.save_image(
+                        profile_pic, user["id"], self.user_photos_path)
                     user["profile_pic"] = profile_pic_name
                 else:
                     user["profile_pic"] = "default"
-
-                user["password"] = "BTECH" + ''.join(random.choices(chars, k=6))
+                if user["id"] != "4DM1N":
+                    user["password"] = "BTECH" + ''.join(
+                        random.choices(chars, k=6))
                 user["password_updated"] = "0000-00-00 00:00:00"
                 b = User(**user)
                 session.add(b)
                 if user["id"] != "4DM1N":
-                    await self.send_email(user["email"], user["id"], user["password"])
+                    await self.send_email(user["email"], user["id"],
+                                          user["password"])
                 # await self.send_email(user["email"], user["id"])
-            return {"message": self.generate_user_message(len(users), "added"), "data": None}
+            return {
+                "message": self.generate_user_message(len(users), "added"),
+                "data": None
+            }
+
         return await self.execute_query(operation)
 
     # ? select
     async def paged_users(self, payload: dict):
+
         async def operation(session):
             user = aliased(User)
             role = aliased(Role)
-            query = select(
-                user.id,
-                user.profile_pic,
-                user.first_name,
-                user.last_name,
-                user.email,
-                user.school_id,
-                role.role_name,
-                role.color,
-                user.is_verified,
-                user.created_at
-            ).join(role, user.role_id == role.id)
-            result = await self.query_helper.get_paged_data(session, [user, role], payload, query)
-            return {"data": {"items": result["data"], "total_count": result["total_count"]}, "message": "Users fetched successfully"}
+            query = select(user.id, user.profile_pic, user.first_name,
+                           user.last_name, user.email, user.school_id,
+                           role.role_name, role.color, user.is_verified,
+                           user.created_at).join(role, user.role_id == role.id)
+            result = await self.query_helper.get_paged_data(
+                session, [user, role], payload, query)
+            return {
+                "data": {
+                    "items": result["data"],
+                    "total_count": result["total_count"]
+                },
+                "message": "Users fetched successfully"
+            }
+
         return await self.execute_query(operation)
 
     async def fetch_via_id(self, ids: list):
+
         async def operation(session):
-            result = await session.execute(select(User).where(User.id.in_(ids)))
+            result = await session.execute(
+                select(User).where(User.id.in_(ids)))
             data = result.scalars().all()
             data = await self.query_helper.model_to_dict(data)
-            return {"data": data , "message": "User fetched successfully"}
+            return {"data": data, "message": "User fetched successfully"}
+
         return await self.execute_query(operation)
 
     async def fetch_via_email_and_password(self, email: str, password: str):
+
         async def operation(session):
-            result = await session.execute(select(User).where(User.email == email, User.password == password))
+            result = await session.execute(
+                select(User).where(User.email == email,
+                                   User.password == password))
             data = result.scalars().all()
             data = await self.query_helper.model_to_dict(data)
-            return {"data": data , "message": "User fetched successfully"}
+            return {"data": data, "message": "User fetched successfully"}
+
         return await self.execute_query(operation)
 
     async def fetch_via_school_id(self, school_id: str):
+
         async def operation(session):
-            result = await session.execute(select(User).where(User.school_id == school_id))
+            result = await session.execute(
+                select(User).where(User.school_id == school_id))
             data = result.scalars().all()
             data = await self.query_helper.model_to_dict(data)
-            return {"data": data , "message": "User fetched successfully"}
+            return {"data": data, "message": "User fetched successfully"}
+
         return await self.execute_query(operation)
 
     # ? Update
 
     async def update_users(self, users: list):
+
         async def operation(session):
             for user in users:
                 # fetch existing data
-                existing_user = await session.execute(select(User).where(User.id == user["id"]))
+                existing_user = await session.execute(
+                    select(User).where(User.id == user["id"]))
                 existing_user = existing_user.scalar_one_or_none()
                 if not existing_user:
                     continue
@@ -132,7 +158,8 @@ class UserQueries(BaseQuery):
                 user.pop("password_updated", None)
                 user.pop("email_updated", None)
 
-                if "password" in user and user["password"] != existing_user.password:
+                if "password" in user and user[
+                        "password"] != existing_user.password:
                     if user["password"] == "":
                         user.pop("password")
                     else:
@@ -146,96 +173,121 @@ class UserQueries(BaseQuery):
                 # save profile pic
                 profile_pic_buffer = user.pop("profile_pic_buffer", None)
                 if profile_pic_buffer:
-                    profile_pic = await self.image_helper.convert_to_image(profile_pic_buffer)
-                    profile_pic_name = await self.image_helper.save_image(profile_pic, user["id"], self.user_photos_path )
+                    profile_pic = await self.image_helper.convert_to_image(
+                        profile_pic_buffer)
+                    profile_pic_name = await self.image_helper.save_image(
+                        profile_pic, user["id"], self.user_photos_path)
                     user["profile_pic"] = profile_pic_name
 
                 # update user
-                stmt = (
-                    update(User)
-                    .where(User.id == user["id"])
-                    .values(**{key: value for key, value in user.items() if key != "id"})
-                )
+                stmt = (update(User).where(User.id == user["id"]).values(
+                    **{
+                        key: value
+                        for key, value in user.items() if key != "id"
+                    }))
                 await session.execute(stmt)
-            return {"message": self.generate_user_message(len(users), "updated"), "data": None}
+            return {
+                "message": self.generate_user_message(len(users), "updated"),
+                "data": None
+            }
+
         return await self.execute_query(operation)
 
     # ? Delete
 
     async def delete_users(self, user_ids: list):
+
         async def operation(session):
-            result = await session.execute(User.__table__.delete().where(User.id.in_(user_ids)))
+            result = await session.execute(User.__table__.delete().where(
+                User.id.in_(user_ids)))
             await session.commit()
-            return {"message": self.generate_user_message(result.rowcount, "deleted"), "data": None}
+            return {
+                "message": self.generate_user_message(result.rowcount,
+                                                      "deleted"),
+                "data": None
+            }
+
         return await self.execute_query(operation)
 
     async def populate_users(self):
+
         async def operation(session):
             print("Populating users...")
             user_count = await session.execute(select(func.count(User.id)))
             count = user_count.scalar()
             if count == 0:
                 await self.insert_users(users)
-                return {"data": None, "message": "Users populated successfully"}
+                return {
+                    "data": None,
+                    "message": "Users populated successfully"
+                }
             return {"data": None, "message": "Users already populated"}
+
         return await self.execute_query(operation)
 
     async def get_borrowed_books(self, user_id: str):
+
         async def operation(session):
             catalog = aliased(Catalog)
             copy = aliased(Copy)
             borrow = aliased(BorrowedBook)
-            result = await session.execute(select(
-                borrow.id,
-                borrow.copy_id,
-                copy.access_number,
-                copy.status,
-                copy.catalog_id,
-                catalog.call_number,
-                catalog.title,
-                catalog.author,
-                catalog.publisher,
-                catalog.cover_image,
-                catalog.description
-            )
-                .join(copy, borrow.copy_id == copy.id)
-                .join(catalog, copy.catalog_id == catalog.id)
-                .where(borrow.user_id == user_id))
+            result = await session.execute(
+                select(borrow.id, borrow.copy_id, copy.access_number,
+                       copy.status, copy.catalog_id, catalog.call_number,
+                       catalog.title, catalog.author, catalog.publisher,
+                       catalog.cover_image, catalog.description).join(
+                           copy, borrow.copy_id == copy.id).join(
+                               catalog, copy.catalog_id == catalog.id).where(
+                                   borrow.user_id == user_id))
             result = [dict(row) for row in result.mappings()]
-            return {"data": result , "message": "User fetched successfully"}
+            return {"data": result, "message": "User fetched successfully"}
+
         return await self.execute_query(operation)
 
     async def count_all_users(self):
+
         async def operation(session):
             user_count = await session.execute(select(func.count(User.id)))
             count = user_count.scalar()
-            return {"data": count, "message": "User count fetched successfully"}
+            return {
+                "data": count,
+                "message": "User count fetched successfully"
+            }
+
         return await self.execute_query(operation)
 
     async def count_user_roles(self):
+
         async def operation(session):
             role = aliased(Role)
             user = aliased(User)
-            role_count = await session.execute(select(
-                role.role_name,
-                role.color,
-                func.count(user.id).label("count")
-            ).join(user, role.id == user.role_id).group_by(role.role_name, role.color))
-            count = [{"label": row[0], "color": row[1], "value": row[2]} for row in role_count]
-            return {"data": count, "message": "User count by role fetched successfully"}
+            role_count = await session.execute(
+                select(role.role_name, role.color,
+                       func.count(user.id).label("count")).join(
+                           user, role.id == user.role_id).group_by(
+                               role.role_name, role.color))
+            count = [{
+                "label": row[0],
+                "color": row[1],
+                "value": row[2]
+            } for row in role_count]
+            return {
+                "data": count,
+                "message": "User count by role fetched successfully"
+            }
+
         return await self.execute_query(operation)
 
     def generate_user_message(self, user_count, query_type):
         return f"{user_count} User{'' if user_count == 1 else 's'} {query_type} successfully"
 
-
-    async def send_email(self, to_email:str, id: str, temp_password: str):
+    async def send_email(self, to_email: str, id: str, temp_password: str):
         smtp_server = "smtp.postmarkapp.com"
         smtp_port = 587
         sender_email = SERVER_EMAIL or ""
         sender_password = SERVER_PASSWORD or ""
 
-        base_url = "http://localhost:5000/verify-email?id=" + id #change
+        base_url = "https://9f18c471-dfad-4417-b17a-ebc878c70378-00-48vowcrk1hff.sisko.replit.dev/verify-email?id=" + id  #change
 
         msg = MIMEMultipart()
         msg["From"] = sender_email

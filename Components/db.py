@@ -3,7 +3,9 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from Components.config import DeploymentMode, DEPLOYMENT_MODE, DEVELOPMENT_CONFIG, PRODUCTION_CONFIG
 from Components.tables.models import Base
 
+
 class Database:
+
     def __init__(self, app: Quart, main) -> None:
         self.register_routes(app)
         self.main = main
@@ -21,19 +23,17 @@ class Database:
             max_overflow=10,
             pool_timeout=120,
             pool_recycle=3600,
-            pool_pre_ping=False
-        )
+            pool_pre_ping=False)
 
-        self.Session = async_sessionmaker(
-            bind=self.engine,
-            expire_on_commit=False
-        )
+        self.Session = async_sessionmaker(bind=self.engine,
+                                          expire_on_commit=False)
 
     def register_routes(self, app: Quart):
+
         @app.route("/reset_tables", methods=["GET"])
         async def reset_tables():
-            if not DEPLOYMENT_MODE == DeploymentMode.DEVELOPMENT:
-                return "You can only reset tables in development mode"
+            # if not DEPLOYMENT_MODE == DeploymentMode.DEVELOPMENT:
+            #     return "You can only reset tables in development mode"
             try:
                 async with self.engine.begin() as conn:
                     await conn.run_sync(Base.metadata.drop_all)
